@@ -225,8 +225,13 @@ export function BotControls({
             Live
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto text-xs text-slate-300 leading-relaxed py-2">
-          {statusMessage}
+        <div className="flex-1 overflow-y-auto text-xs text-slate-300 leading-relaxed py-2 space-y-1">
+          <div className="text-emerald-400 font-semibold mb-1">{statusMessage}</div>
+          {bot.logs.map((log) => (
+            <div key={log.id} className="text-slate-300 border-b border-slate-900/50 pb-1">
+              {log.details || `${log.time} - ${log.status}: $${log.stake}`}
+            </div>
+          ))}
         </div>
       </div>
     </div>

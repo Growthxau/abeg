@@ -40,7 +40,7 @@ export interface BotLogEntry {
   stake: number;
   payout?: number;
   profit?: number;
-  status: 'PENDING' | 'WON' | 'LOST' | 'ERROR';
+  status: 'PENDING' | 'WON' | 'LOST' | 'ERROR' | 'INFO';
   details?: string;
   strategyUsed?: string;
 }
@@ -651,6 +651,41 @@ export function useAutoTradingBot({
       setBotStatus('analyzing');
     }
   }, [isRunning, botStatus, proposal]);
+
+  // Live 1-second trading condition log ticker (one condition per second, no duplicates at same time, appears at top)
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const interval = setInterval(() => {
+      const pts = pricesRef.current;
+      if (pts.length === 0) return;
+      const currentPrice = pts[pts.length - 1];
+      const strat = settingsRef.current.strategy.replace('_', ' ').toUpperCase();
+      const stats = volatilityStats;
+      const timeStr = new Date().toLocaleTimeString();
+
+      const conditionText = `[${timeStr}] Strategy: ${strat} | Price: ${currentPrice.toFixed(2)} | Mean: ${stats.mean.toFixed(2)} | Dev: ${stats.deviation.toFixed(2)}`;
+
+      setLogs((prev) => {
+        if (prev.length > 0 && prev[0].details === conditionText) {
+          return prev; // do not double print same value at the same time
+        }
+        const newEntry: BotLogEntry = {
+          id: `cond-${Date.now()}`,
+          time: timeStr,
+          symbol: activeSymbol?.underlying_symbol_name || activeSymbol?.underlying_symbol || 'Market',
+          direction: directionRef.current,
+          stake: currentStakeRef.current,
+          status: 'INFO',
+          details: conditionText,
+          strategyUsed: strat,
+        };
+        return [newEntry, ...prev.slice(0, 99)];
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRunning, volatilityStats, activeSymbol]);
 
   // Main automated execution loop
   useEffect(() => {
