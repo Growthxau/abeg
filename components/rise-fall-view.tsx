@@ -14,11 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useContractMarkers } from '@/hooks/use-contract-markers';
 import { useCallback, useMemo, useState, type CSSProperties } from 'react';
-import { Ban, LayoutDashboard, History } from 'lucide-react';
+import { Ban, LayoutDashboard, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TradeControls } from './trade-controls';
 import { BotControls } from './bot-controls';
-import { HistoryView } from './history-view';
+import { RiskManagementView } from './risk-management-view';
 import { ConfigurableTradeControls, ConfigurableBuyButton } from './configurable-trade-controls';
 import type { UseAutoTradingBotReturn } from '@/hooks/use-auto-trading-bot';
 import type { RiseFallAppConfig } from '../lib/app-config';
@@ -397,7 +397,7 @@ export function RiseFallView({
       />
     ) : null;
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'history'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'risk'>('dashboard');
 
   return (
     <div className="min-h-dvh bg-slate-950 flex items-center justify-center p-0 sm:p-4">
@@ -435,7 +435,7 @@ export function RiseFallView({
                 isAuthenticated={authState === 'authenticated'}
               />
             ) : (
-              <HistoryView closedPositions={closedPositions} />
+              <RiskManagementView bot={bot} />
             )
           ) : null}
         </div>
@@ -455,14 +455,14 @@ export function RiseFallView({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('history')}
+            onClick={() => setActiveTab('risk')}
             className={cn(
               'flex flex-col items-center gap-1 transition-colors cursor-pointer',
-              activeTab === 'history' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+              activeTab === 'risk' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
             )}
           >
-            <History className="w-5 h-5" />
-            <span className="text-[10px]">History</span>
+            <ShieldAlert className="w-5 h-5" />
+            <span className="text-[10px]">Risk Management</span>
           </button>
         </div>
       </main>
