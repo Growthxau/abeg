@@ -112,6 +112,7 @@ export function LiveRiseFall({
       buyError={trading.buyError}
       clearBuyResult={trading.clearBuyResult}
       openPositions={trading.openPositions}
+      closedPositions={trading.closedPositions}
       sellContract={trading.sellContract}
       sellingId={trading.sellingId}
       appConfig={appConfig}

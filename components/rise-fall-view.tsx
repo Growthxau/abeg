@@ -72,10 +72,9 @@ import type {
   BuyResult,
   DerivWS,
 } from '@deriv/core';
-import type { Direction, DurationSelectUnit, DurationOption } from '../lib/types';
+import type { Direction, DurationSelectUnit, DurationOption, OpenPosition, ClosedPosition } from '../lib/types';
 import type { UseSmartChartsApiReturn } from '@/hooks/use-smartcharts-api';
 import type { SmartChartChartData } from '@/hooks/use-smartchart-chart-data';
-import type { OpenPosition } from '../lib/types';
 
 import { MarketLiveTicker } from '@/components/market-live-ticker';
 
@@ -133,6 +132,7 @@ export interface RiseFallViewProps {
 
   // Positions
   openPositions: OpenPosition[];
+  closedPositions: ClosedPosition[];
   sellContract: (contractId: number, bidPrice: string) => Promise<void>;
   sellingId: number | null;
 
@@ -214,6 +214,7 @@ export function RiseFallView({
   buyError,
   clearBuyResult,
   openPositions,
+  closedPositions,
   chartData,
   getQuotes,
   subscribeQuotes,
@@ -400,12 +401,14 @@ export function RiseFallView({
 
   return (
     <div className="min-h-dvh bg-slate-950 flex items-center justify-center p-0 sm:p-4">
-      <main className="max-w-[420px] w-full mx-auto my-0 sm:my-2 min-h-dvh sm:min-h-[844px] sm:max-h-[94vh] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden overflow-y-auto">
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+      <main className="max-w-[420px] w-full mx-auto my-0 sm:my-2 min-h-dvh sm:min-h-[844px] sm:max-h-[94vh] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden">
+        {/* Absolutely Pinned Header - Never Moves */}
+        <div className="absolute top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
           {headerEl}
         </div>
 
-        <div className="w-full flex-1 p-3 pb-20">
+        {/* Scrollable Content Area in Between */}
+        <div className="w-full flex-1 overflow-y-auto mt-14 mb-16 p-3">
           {isLoading ? (
             <Skeleton className="h-48 w-full rounded-xl" />
           ) : bot ? (
@@ -432,12 +435,12 @@ export function RiseFallView({
                 isAuthenticated={authState === 'authenticated'}
               />
             ) : (
-              <HistoryView bot={bot} />
+              <HistoryView closedPositions={closedPositions} />
             )
           ) : null}
         </div>
 
-        {/* Fixed Bottom Navbar */}
+        {/* Absolutely Pinned Bottom Navbar - Never Moves */}
         <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 py-2 px-6 flex items-center justify-around shadow-lg">
           <button
             type="button"
