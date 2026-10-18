@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
 import type { Direction } from '../lib/types';
 import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
+import { evaluateTrendAndPullbackStrategy } from '@/lib/strategy';
 
 export type BotStrategy =
   | 'ai_gemini'
@@ -374,8 +375,10 @@ export function useAutoTradingBot({
     }
   }, [activeSymbol, wonRuns]);
 
+  const lastEvaluatedCandleIndexRef = useRef(-1);
+
   // Determine next direction according to strategy
-  const determineNextDirection = useCallback(async (): Promise<Direction> => {
+  const determineNextDirection = useCallback(async (): Promise<Direction | 'HOLD'> => {
     const strat = settingsRef.current.strategy;
     const pts = pricesRef.current;
 
@@ -387,29 +390,15 @@ export function useAutoTradingBot({
           return signal.recommendation;
         }
       }
-      // If AI recommends HOLD or below threshold, fallback to volatility breakout
     }
 
-    // 2. Volatility Breakout Deviation Strategy
-    if (strat === 'volatility_breakout' || strat === 'ai_gemini') {
-      const period = settingsRef.current.deviationPeriod || 15;
-      const mult = settingsRef.current.deviationMultiplier || 2.0;
-      const window = pts.slice(-period);
-      if (window.length >= 5) {
-        const mean = window.reduce((a, b) => a + b, 0) / window.length;
-        const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
-        const stdDev = Math.sqrt(variance);
-        const upperBand = mean + mult * stdDev;
-        const lowerBand = mean - mult * stdDev;
-        const current = window[window.length - 1];
-
-        if (current >= upperBand) return 'CALL'; // Breakout up
-        if (current <= lowerBand) return 'PUT'; // Breakout down
-
-        // Inside bands: check direction of latest micro momentum
-        const prev = window[window.length - 2];
-        return current >= prev ? 'CALL' : 'PUT';
+    // 2. Volatility Breakout & Trend Pullback Strategy (EMA 9/21 + RSI + Pullback + Sideways filter)
+    if (strat === 'volatility_breakout' || strat === 'trend_following' || strat === 'contrarian') {
+      const res = evaluateTrendAndPullbackStrategy(pts, lastEvaluatedCandleIndexRef);
+      if (res.reason) {
+        setStatusMessage(`[Strategy]: ${res.reason}`);
       }
+      return res.decision;
     }
 
     // 3. Fixed Rise / Fall
@@ -421,16 +410,11 @@ export function useAutoTradingBot({
       return directionRef.current === 'CALL' ? 'PUT' : 'CALL';
     }
 
-    // 5. Trend Following vs Contrarian
-    if (pts.length >= 2) {
-      const last = pts[pts.length - 1];
-      const prev = pts[pts.length - 2];
-      const isUp = last >= prev;
-      if (strat === 'trend_following') return isUp ? 'CALL' : 'PUT';
-      if (strat === 'contrarian') return isUp ? 'PUT' : 'CALL';
+    const res = evaluateTrendAndPullbackStrategy(pts, lastEvaluatedCandleIndexRef);
+    if (res.reason) {
+      setStatusMessage(`[Strategy]: ${res.reason}`);
     }
-
-    return directionRef.current || 'CALL';
+    return res.decision;
   }, [triggerAiAnalysis]);
 
   // When buyResult arrives, record active contract and log
@@ -699,6 +683,11 @@ export function useAutoTradingBot({
     const executeNextTrade = async () => {
       const nextDir = await determineNextDirection();
       if (cancelled || !isRunningRef.current) return;
+
+      if (nextDir === 'HOLD') {
+        setBotStatus('analyzing');
+        return;
+      }
 
       if (directionRef.current !== nextDir) {
         setDirection(nextDir);
