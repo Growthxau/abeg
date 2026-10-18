@@ -24,9 +24,30 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 export function generateMetadata(): Metadata {
   const faviconUri = buildFaviconUri();
+  const siteUrl = 'https://www.g-squad.buzz';
+  const title = 'G-Squad | Automated Trading Platform';
+  const description =
+    'Explore G-Squad, an automated trading platform for Deriv Synthetic Indices, with a dashboard to monitor your bot and manage trading settings.';
+
   return {
-    title: process.env.NEXT_PUBLIC_DERIV_APP_NAME?.trim() || 'Deriv Auto Trading Bot',
-    description: 'Automated Rise/Fall trading bot powered by Deriv',
+    title,
+    description,
+    metadataBase: new URL(siteUrl),
+    alternates: {
+      canonical: '/',
+    },
+    openGraph: {
+      type: 'website',
+      url: siteUrl,
+      title,
+      description,
+      siteName: 'G-Squad',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
     ...(faviconUri ? { icons: { icon: faviconUri } } : {}),
   };
 }
