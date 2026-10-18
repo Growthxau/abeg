@@ -14,9 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useContractMarkers } from '@/hooks/use-contract-markers';
 import { useCallback, useMemo, useState, type CSSProperties } from 'react';
-import { Ban } from 'lucide-react';
+import { Ban, LayoutDashboard, History } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { TradeControls } from './trade-controls';
 import { BotControls } from './bot-controls';
+import { HistoryView } from './history-view';
 import { ConfigurableTradeControls, ConfigurableBuyButton } from './configurable-trade-controls';
 import type { UseAutoTradingBotReturn } from '@/hooks/use-auto-trading-bot';
 import type { RiseFallAppConfig } from '../lib/app-config';
@@ -394,6 +396,8 @@ export function RiseFallView({
       />
     ) : null;
 
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'history'>('dashboard');
+
   return (
     <div className="min-h-dvh bg-slate-950 flex items-center justify-center p-0 sm:p-4">
       <main className="max-w-[420px] w-full mx-auto my-0 sm:my-2 min-h-dvh sm:min-h-[844px] sm:max-h-[94vh] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden overflow-y-auto">
@@ -401,32 +405,62 @@ export function RiseFallView({
           {headerEl}
         </div>
 
-        <div className="w-full flex-1 p-3">
+        <div className="w-full flex-1 p-3 pb-20">
           {isLoading ? (
             <Skeleton className="h-48 w-full rounded-xl" />
           ) : bot ? (
-            <BotControls
-              bot={bot}
-              isConnected={isConnected}
-              activeSymbol={activeSymbol}
-              direction={direction}
-              onDirectionChange={setDirection}
-              allowEquals={allowEquals}
-              onAllowEqualsChange={setAllowEquals}
-              duration={duration}
-              onDurationChange={setDuration}
-              durationOptions={durationOptions}
-              durationUnit={durationUnit}
-              onDurationUnitChange={setDurationUnit}
-              endDate={endDate}
-              onEndDateChange={setEndDate}
-              endTime={endTime}
-              onEndTimeChange={setEndTime}
-              ws={ws}
-              proposal={proposal}
-              isAuthenticated={authState === 'authenticated'}
-            />
+            activeTab === 'dashboard' ? (
+              <BotControls
+                bot={bot}
+                isConnected={isConnected}
+                activeSymbol={activeSymbol}
+                direction={direction}
+                onDirectionChange={setDirection}
+                allowEquals={allowEquals}
+                onAllowEqualsChange={setAllowEquals}
+                duration={duration}
+                onDurationChange={setDuration}
+                durationOptions={durationOptions}
+                durationUnit={durationUnit}
+                onDurationUnitChange={setDurationUnit}
+                endDate={endDate}
+                onEndDateChange={setEndDate}
+                endTime={endTime}
+                onEndTimeChange={setEndTime}
+                ws={ws}
+                proposal={proposal}
+                isAuthenticated={authState === 'authenticated'}
+              />
+            ) : (
+              <HistoryView bot={bot} />
+            )
           ) : null}
+        </div>
+
+        {/* Fixed Bottom Navbar */}
+        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 py-2 px-6 flex items-center justify-around shadow-lg">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className={cn(
+              'flex flex-col items-center gap-1 transition-colors cursor-pointer',
+              activeTab === 'dashboard' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            )}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[10px]">Dashboard</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              'flex flex-col items-center gap-1 transition-colors cursor-pointer',
+              activeTab === 'history' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            )}
+          >
+            <History className="w-5 h-5" />
+            <span className="text-[10px]">History</span>
+          </button>
         </div>
       </main>
     </div>

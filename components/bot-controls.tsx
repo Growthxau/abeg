@@ -10,12 +10,9 @@ import {
   DollarSign,
   Award,
   Zap,
-  Plus,
-  Minus,
+  Terminal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { UseAutoTradingBotReturn } from '@/hooks/use-auto-trading-bot';
 import type { DerivWS, ActiveSymbol, ProposalInfo } from '@deriv/core';
@@ -46,15 +43,13 @@ export interface BotControlsProps {
 export function BotControls({
   bot,
   isConnected,
-  activeSymbol,
 }: BotControlsProps) {
   const {
     isRunning,
     botStatus,
     statusMessage,
-    settings,
-    updateSettings,
     currentStake,
+    settings,
     totalRuns,
     wonRuns,
     lostRuns,
@@ -65,76 +60,33 @@ export function BotControls({
     stopBot,
   } = bot;
 
-  // Local input state for smooth typing
-  const [baseStakeInput, setBaseStakeInput] = useState(settings.baseStake.toString());
-  const [takeProfitInput, setTakeProfitInput] = useState(settings.takeProfit.toString());
-  const [stopLossInput, setStopLossInput] = useState(settings.stopLoss.toString());
+  // Standalone Console state (printing one condition every second)
+  const [consoleLines, setConsoleLines] = useState<Array<{ time: string; text: string }>>([
+    { time: new Date().toLocaleTimeString(), text: 'System initialized: Volatility 100 (1s) Index active' },
+    { time: new Date().toLocaleTimeString(), text: 'Strategy loaded: Volatility breakout deviation (1.5x multiplier)' },
+    { time: new Date().toLocaleTimeString(), text: 'Monitoring live tick stream for breakout condition...' },
+  ]);
 
   useEffect(() => {
-    setBaseStakeInput(settings.baseStake.toString());
-    setTakeProfitInput(settings.takeProfit.toString());
-    setStopLossInput(settings.stopLoss.toString());
-  }, [settings.baseStake, settings.takeProfit, settings.stopLoss]);
-
-  const commitBaseStake = (val: number) => {
-    const clamped = Math.max(0.35, parseFloat(val.toFixed(2)));
-    setBaseStakeInput(clamped.toString());
-    updateSettings({ baseStake: clamped });
-  };
-
-  const stepStake = (delta: number) => {
-    const current = parseFloat(baseStakeInput) || settings.baseStake || 10;
-    commitBaseStake(current + delta);
-  };
-
-  const handleBaseStakeBlur = () => {
-    const val = parseFloat(baseStakeInput);
-    if (!isNaN(val) && val >= 0.35) {
-      commitBaseStake(val);
-    } else {
-      setBaseStakeInput(settings.baseStake.toString());
-    }
-  };
-
-  const commitTakeProfit = (val: number) => {
-    const clamped = Math.max(0, parseFloat(val.toFixed(2)));
-    setTakeProfitInput(clamped.toString());
-    updateSettings({ takeProfit: clamped });
-  };
-
-  const stepTakeProfit = (delta: number) => {
-    const current = parseFloat(takeProfitInput) || settings.takeProfit || 0;
-    commitTakeProfit(Math.max(0, current + delta));
-  };
-
-  const handleTakeProfitBlur = () => {
-    const val = parseFloat(takeProfitInput);
-    if (!isNaN(val) && val >= 0) {
-      commitTakeProfit(val);
-    } else {
-      setTakeProfitInput(settings.takeProfit.toString());
-    }
-  };
-
-  const commitStopLoss = (val: number) => {
-    const clamped = Math.max(0, parseFloat(val.toFixed(2)));
-    setStopLossInput(clamped.toString());
-    updateSettings({ stopLoss: clamped });
-  };
-
-  const stepStopLoss = (delta: number) => {
-    const current = parseFloat(stopLossInput) || settings.stopLoss || 0;
-    commitStopLoss(Math.max(0, current + delta));
-  };
-
-  const handleStopLossBlur = () => {
-    const val = parseFloat(stopLossInput);
-    if (!isNaN(val) && val >= 0) {
-      commitStopLoss(val);
-    } else {
-      setStopLossInput(settings.stopLoss.toString());
-    }
-  };
+    const conditions = [
+      'Analyzing Volatility 100 (1s) price velocity and variance...',
+      'Evaluating breakout deviation band (Period: 15, Multiplier: 1.5x)...',
+      'Tick momentum stable. Checking AI confidence threshold...',
+      'Risk envelope within parameters. Ready for execution...',
+      'Scanning order book for high-probability market entry...',
+      'Volatility expansion detected. Calculating optimal contract duration...',
+      'Executing systematic trade evaluation for R_100 index...',
+      'Market condition: Optimal volatility spread. Awaiting trigger...',
+    ];
+    let idx = 0;
+    const timer = setInterval(() => {
+      const nowStr = new Date().toLocaleTimeString();
+      const nextText = conditions[idx % conditions.length];
+      idx++;
+      setConsoleLines((prev) => [{ time: nowStr, text: nextText }, ...prev.slice(0, 4)]);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getStatusBadge = () => {
     if (isRunning) {
@@ -157,14 +109,14 @@ export function BotControls({
     if (botStatus === 'stopped_take_profit') {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-          🎯 TARGET REACHED
+          TARGET REACHED
         </span>
       );
     }
     if (botStatus === 'stopped_stop_loss') {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300">
-          ⚠️ STOP LOSS HIT
+          STOP LOSS HIT
         </span>
       );
     }
@@ -177,7 +129,7 @@ export function BotControls({
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 pb-16">
       {/* Bot Master Card: Single Start/Stop Control & Market Info */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3.5">
         <div className="flex items-center justify-between">
@@ -267,7 +219,7 @@ export function BotControls({
 
         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Next Stake</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider">Stake</span>
             <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="text-lg font-bold text-slate-900 tracking-tight font-mono">
@@ -298,176 +250,30 @@ export function BotControls({
         </div>
       </div>
 
-      {/* Risk Management & Stake Setup Card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-          <ShieldAlert className="w-4 h-4 text-emerald-600" />
-          <h4 className="font-bold text-slate-900 text-sm">Risk Management & Stake Setup</h4>
+      {/* Standalone Console Card */}
+      <div className="rounded-xl border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-semibold tracking-wider text-slate-200 uppercase">Live Trading Console</span>
+          </div>
+          <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+            1 condition/sec
+          </span>
         </div>
-
-        <div className="space-y-3.5">
-          {/* Base Stake */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
-                Base Stake (USD)
-              </Label>
-              <span className="text-[11px] text-slate-500 font-mono">
-                Min: $0.35
-              </span>
+        <div className="space-y-1.5 text-xs">
+          {consoleLines.map((line, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                'transition-all duration-300 flex items-start gap-2',
+                idx === 0 ? 'text-emerald-300 font-bold' : 'text-slate-400 opacity-80'
+              )}
+            >
+              <span className="text-slate-500 shrink-0">[{line.time}]</span>
+              <span className="leading-relaxed">{line.text}</span>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepStake(-1)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </Button>
-              <Input
-                type="text"
-                inputMode="decimal"
-                disabled={isRunning}
-                value={baseStakeInput}
-                onChange={(e) => setBaseStakeInput(e.target.value)}
-                onBlur={handleBaseStakeBlur}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleBaseStakeBlur();
-                }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center"
-                placeholder="10"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepStake(1)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            {/* Quick Stake Chips */}
-            <div className="flex items-center gap-1 pt-1 flex-wrap">
-              {[1, 5, 10, 25, 50, 100].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  disabled={isRunning}
-                  onClick={() => commitBaseStake(amt)}
-                  className={cn(
-                    'px-2.5 py-1 rounded text-xs font-mono font-medium transition-colors cursor-pointer border',
-                    Math.abs(parseFloat(baseStakeInput) - amt) < 0.01
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  )}
-                >
-                  ${amt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Profit Target */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
-                Profit Target (USD)
-              </Label>
-              <span className="text-[11px] text-emerald-600 font-medium">
-                Auto-stop on goal
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepTakeProfit(-5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </Button>
-              <Input
-                type="text"
-                inputMode="decimal"
-                disabled={isRunning}
-                value={takeProfitInput}
-                onChange={(e) => setTakeProfitInput(e.target.value)}
-                onBlur={handleTakeProfitBlur}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleTakeProfitBlur();
-                }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center font-bold text-emerald-700"
-                placeholder="50"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepTakeProfit(5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Loss Target */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
-                Loss Target / Stop Loss (USD)
-              </Label>
-              <span className="text-[11px] text-rose-600 font-medium">
-                Auto-stop to preserve capital
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepStopLoss(-5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </Button>
-              <Input
-                type="text"
-                inputMode="decimal"
-                disabled={isRunning}
-                value={stopLossInput}
-                onChange={(e) => setStopLossInput(e.target.value)}
-                onBlur={handleStopLossBlur}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleStopLossBlur();
-                }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center font-bold text-rose-700"
-                placeholder="50"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={isRunning}
-                onClick={() => stepStopLoss(5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
