@@ -99,7 +99,7 @@ export function BotControls({
   };
 
   return (
-    <div className="w-full space-y-4 pb-20">
+    <div className="w-full space-y-4 pb-0">
       {/* Bot Master Card: Single Start/Stop Control & Market Info */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3.5">
         <div className="flex items-center justify-between">
