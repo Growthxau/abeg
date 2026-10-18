@@ -215,7 +215,7 @@ export function BotControls({
       </div>
 
       {/* Console Log Card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
+      <div className="-mx-3 sm:mx-0 rounded-none sm:rounded-xl border-x-0 border-b-0 sm:border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />

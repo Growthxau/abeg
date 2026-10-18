@@ -645,6 +645,13 @@ export function useAutoTradingBot({
     };
   }, [ws, isConnected, isAuthenticated, setStake]);
 
+  // Auto-resume analyzing when proposal arrives while waiting
+  useEffect(() => {
+    if (isRunning && botStatus === 'waiting_proposal' && proposal) {
+      setBotStatus('analyzing');
+    }
+  }, [isRunning, botStatus, proposal]);
+
   // Main automated execution loop
   useEffect(() => {
     if (!isRunning) return;
