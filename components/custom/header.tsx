@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { LANGUAGE_LOCALES } from '@/lib/i18n';
 import { useAppTranslations } from '@/components/custom/i18n-provider';
 import { AppLogo } from '@/components/custom/app-logo';
+import { PWAInstallButton } from '@/components/custom/pwa-install-button';
 import type { AuthState, DerivAccount } from '@deriv/core';
 
 interface HeaderProps {
@@ -151,6 +152,7 @@ export function Header({
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
+            <PWAInstallButton />
             <Button
               variant="outline"
               size="sm"
@@ -172,6 +174,9 @@ export function Header({
             )}
           </div>
         )}
+        <div className="ml-1.5 flex items-center">
+          <PWAInstallButton />
+        </div>
       </div>
     </header>
   );
