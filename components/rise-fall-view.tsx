@@ -408,7 +408,7 @@ export function RiseFallView({
         </div>
 
         {/* Scrollable Content Area in Between */}
-        <div className="w-full flex-1 overflow-y-auto mt-14 mb-16 p-3">
+        <div className="absolute top-[57px] bottom-[68px] left-0 right-0 overflow-y-auto p-3 space-y-3 pb-[12px]">
           {isLoading ? (
             <Skeleton className="h-48 w-full rounded-xl" />
           ) : bot ? (
@@ -441,7 +441,7 @@ export function RiseFallView({
         </div>
 
         {/* Absolutely Pinned Bottom Navbar - Never Moves */}
-        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 py-2 px-6 flex items-center justify-around shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 h-14 px-6 flex items-center justify-around shadow-lg">
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}

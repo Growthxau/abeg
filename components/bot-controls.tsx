@@ -146,22 +146,6 @@ export function BotControls({
         </div>
       </div>
 
-      {/* Console Log Card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Console Log</span>
-          </div>
-          <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-            Live
-          </span>
-        </div>
-        <div className="text-xs text-slate-300 leading-relaxed py-1">
-          {statusMessage}
-        </div>
-      </div>
-
       {/* Live Session Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -227,6 +211,22 @@ export function BotControls({
             </span>
           </div>
           <span className="text-[10px] text-slate-500">Consecutive</span>
+        </div>
+      </div>
+
+      {/* Console Log Card */}
+      <div className="rounded-xl border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Console Log</span>
+          </div>
+          <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+            Live
+          </span>
+        </div>
+        <div className="text-xs text-slate-300 leading-relaxed py-1">
+          {statusMessage}
         </div>
       </div>
     </div>
