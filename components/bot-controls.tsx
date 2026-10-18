@@ -227,11 +227,23 @@ export function BotControls({
         </div>
         <div className="flex-1 overflow-y-auto text-xs text-slate-300 leading-relaxed py-2 space-y-1">
           <div className="text-emerald-400 font-semibold mb-1">{statusMessage}</div>
-          {bot.logs.map((log) => (
-            <div key={log.id} className="text-slate-300 border-b border-slate-900/50 pb-1">
-              {log.details || `${log.time} - ${log.status}: $${log.stake}`}
-            </div>
-          ))}
+          {bot.logs.map((log) => {
+            const colorClass =
+              log.status === 'WON'
+                ? 'text-emerald-400 font-medium'
+                : log.status === 'LOST'
+                ? 'text-rose-400 font-medium'
+                : log.status === 'ERROR'
+                ? 'text-amber-400 font-medium'
+                : log.status === 'PENDING'
+                ? 'text-yellow-400 font-medium'
+                : 'text-cyan-300';
+            return (
+              <div key={log.id} className={cn('border-b border-slate-900/50 pb-1', colorClass)}>
+                {log.details || `${log.time} - ${log.status}: $${log.stake}`}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
