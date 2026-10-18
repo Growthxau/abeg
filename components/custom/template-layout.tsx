@@ -3,7 +3,6 @@ import { DerivWSProvider } from './deriv-ws-provider';
 import { Toaster } from '@/components/ui/sonner';
 import ViewportScaler from './ViewportScaler';
 import { EnvCheck } from './env-check';
-import { SplashScreen } from './splash-screen';
 
 /**
  * Shared layout wrapper for all template apps.
@@ -16,9 +15,7 @@ export function TemplateLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
       <DerivWSProvider>
-        <SplashScreen>
-          <ViewportScaler>{children}</ViewportScaler>
-        </SplashScreen>
+        <ViewportScaler>{children}</ViewportScaler>
       </DerivWSProvider>
       <Toaster position="top-right" />
       <EnvCheck />

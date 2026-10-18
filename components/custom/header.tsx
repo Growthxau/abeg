@@ -80,14 +80,18 @@ export function Header({
     <header className="sticky top-0 z-50 flex items-center justify-between px-3 py-1.5 border-b bg-background/95 backdrop-blur-sm">
       <div className="flex items-center gap-2 shrink-0">
         {!logoSrc || logoError ? (
-          <AppLogo className="w-7 h-7" />
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#722F37]/40 bg-white flex items-center justify-center shadow-sm">
+            <AppLogo className="w-6 h-6" />
+          </div>
         ) : (
-          <img
-            src={logoSrc}
-            alt={localize('App Logo')}
-            className="h-7 w-auto object-contain"
-            onError={() => setLogoError(true)}
-          />
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#722F37]/40 bg-white flex items-center justify-center shadow-sm">
+            <img
+              src={logoSrc}
+              alt={localize('App Logo')}
+              className="h-full w-full object-cover"
+              onError={() => setLogoError(true)}
+            />
+          </div>
         )}
         {shouldShowName && (
           <h1 className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
