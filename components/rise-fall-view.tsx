@@ -400,8 +400,8 @@ export function RiseFallView({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'risk'>('dashboard');
 
   return (
-    <div className="min-h-dvh bg-slate-950 flex items-center justify-center p-0 sm:p-4">
-      <main className="max-w-[420px] w-full mx-auto my-0 sm:my-2 min-h-dvh sm:min-h-[844px] sm:max-h-[94vh] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden">
+    <div className="h-dvh w-screen bg-slate-950 flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      <main className="w-full h-dvh sm:h-[844px] sm:max-w-[420px] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden">
         {/* Absolutely Pinned Header - Never Moves */}
         <div className="absolute top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
           {headerEl}
