@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   Play,
   Square,
@@ -10,7 +9,6 @@ import {
   DollarSign,
   Award,
   Zap,
-  Terminal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -60,34 +58,6 @@ export function BotControls({
     stopBot,
   } = bot;
 
-  // Standalone Console state (printing one condition every second)
-  const [consoleLines, setConsoleLines] = useState<Array<{ time: string; text: string }>>([
-    { time: new Date().toLocaleTimeString(), text: 'System initialized: Volatility 100 (1s) Index active' },
-    { time: new Date().toLocaleTimeString(), text: 'Strategy loaded: Volatility breakout deviation (1.5x multiplier)' },
-    { time: new Date().toLocaleTimeString(), text: 'Monitoring live tick stream for breakout condition...' },
-  ]);
-
-  useEffect(() => {
-    const conditions = [
-      'Analyzing Volatility 100 (1s) price velocity and variance...',
-      'Evaluating breakout deviation band (Period: 15, Multiplier: 1.5x)...',
-      'Tick momentum stable. Checking AI confidence threshold...',
-      'Risk envelope within parameters. Ready for execution...',
-      'Scanning order book for high-probability market entry...',
-      'Volatility expansion detected. Calculating optimal contract duration...',
-      'Executing systematic trade evaluation for R_100 index...',
-      'Market condition: Optimal volatility spread. Awaiting trigger...',
-    ];
-    let idx = 0;
-    const timer = setInterval(() => {
-      const nowStr = new Date().toLocaleTimeString();
-      const nextText = conditions[idx % conditions.length];
-      idx++;
-      setConsoleLines((prev) => [{ time: nowStr, text: nextText }, ...prev.slice(0, 4)]);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const getStatusBadge = () => {
     if (isRunning) {
       if (botStatus === 'contract_running') {
@@ -129,7 +99,7 @@ export function BotControls({
   };
 
   return (
-    <div className="w-full space-y-4 pb-16">
+    <div className="w-full space-y-4 pb-20">
       {/* Bot Master Card: Single Start/Stop Control & Market Info */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3.5">
         <div className="flex items-center justify-between">
@@ -247,33 +217,6 @@ export function BotControls({
             </span>
           </div>
           <span className="text-[10px] text-slate-500">Consecutive</span>
-        </div>
-      </div>
-
-      {/* Standalone Console Card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950 text-slate-100 p-4 shadow-sm space-y-2.5 font-mono">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-semibold tracking-wider text-slate-200 uppercase">Live Trading Console</span>
-          </div>
-          <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
-            1 condition/sec
-          </span>
-        </div>
-        <div className="space-y-1.5 text-xs">
-          {consoleLines.map((line, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                'transition-all duration-300 flex items-start gap-2',
-                idx === 0 ? 'text-emerald-300 font-bold' : 'text-slate-400 opacity-80'
-              )}
-            >
-              <span className="text-slate-500 shrink-0">[{line.time}]</span>
-              <span className="leading-relaxed">{line.text}</span>
-            </div>
-          ))}
         </div>
       </div>
     </div>
