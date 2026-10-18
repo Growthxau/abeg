@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
+    "lint": "tsc --noEmit",
     "copy-smartcharts-assets": "node scripts/copy-smartcharts-assets.js",
     "postinstall": "node scripts/copy-smartcharts-assets.js",
     "prebuild": "node scripts/copy-smartcharts-assets.js"

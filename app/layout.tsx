@@ -26,8 +26,8 @@ const ibmPlexSans = IBM_Plex_Sans({
 export function generateMetadata(): Metadata {
   const faviconUri = buildFaviconUri();
   return {
-    title: process.env.NEXT_PUBLIC_DERIV_APP_NAME?.trim() || 'Deriv Rise/Fall Trading App',
-    description: 'A white-label trading application powered by Deriv',
+    title: process.env.NEXT_PUBLIC_DERIV_APP_NAME?.trim() || 'Deriv Auto Trading Bot',
+    description: 'Automated Rise/Fall trading bot powered by Deriv',
     ...(faviconUri ? { icons: { icon: faviconUri } } : {}),
   };
 }

@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { GripVertical, TrendingUp } from 'lucide-react';
+import { GripVertical, TrendingUp, Play, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Localize } from '@deriv-com/translations';
 import { useAppTranslations } from '@/components/custom/i18n-provider';
@@ -30,6 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { centerInScrollContainer } from '@/lib/scroll-within-frame';
 import { cn } from '@/lib/utils';
 import { EndTimePicker } from '@/components/custom/end-time-picker';
+import type { UseAutoTradingBotReturn } from '@/hooks/use-auto-trading-bot';
 import type { DerivWS, ActiveSymbol, ProposalInfo, BuyResult } from '@deriv/core';
 import type { Direction, DurationSelectUnit, DurationOption } from '../lib/types';
 import type { BlockKey, ControlKey, RiseFallAppConfig, StyleVariant } from '../lib/app-config';
@@ -44,7 +45,7 @@ function getBlockLabels(
     allowEquals: localize('Allow equals'),
     stake: localize('Stake'),
     duration: localize('Duration'),
-    buy: localize('Buy button'),
+    buy: localize('Start / Stop Bot'),
   };
 }
 
@@ -59,9 +60,10 @@ function getBlockLabels(
 export interface ConfigurableBuyButtonProps {
   variant: StyleVariant;
   isConnected: boolean;
-  proposal: ProposalInfo | null;
-  onBuy: () => void;
-  isBuying: boolean;
+  proposal?: ProposalInfo | null;
+  onBuy?: () => void;
+  isBuying?: boolean;
+  bot?: UseAutoTradingBotReturn;
 }
 
 export function ConfigurableBuyButton({
@@ -70,74 +72,58 @@ export function ConfigurableBuyButton({
   proposal,
   onBuy,
   isBuying,
+  bot,
 }: ConfigurableBuyButtonProps) {
-  const { localize } = useAppTranslations();
+  const isRunning = bot?.isRunning ?? false;
+  const netProfit = bot?.netProfit ?? 0;
+  const currentStake = bot?.currentStake ?? (proposal ? proposal.askPrice : 10);
 
-  const disabled = !isConnected || !proposal || isBuying;
-  const payout = proposal ? proposal.payout.toFixed(2) : null;
-
-  const variants: Record<StyleVariant, () => React.ReactNode> = {
-    // a — pill (default)
-    a: () => (
-      <Button
-        className="w-full rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-        size="lg"
-        disabled={disabled}
-        onClick={onBuy}
-      >
-        {isBuying ? (
-          <Localize i18n_default_text="Purchasing..." />
-        ) : (
-          <span className="flex flex-col items-center leading-tight gap-0.5">
-            <span><Localize i18n_default_text="Buy" /></span>
-            {payout && (
-              <span className="text-xs font-normal opacity-90">
-                <Localize i18n_default_text="Payout {{payout}} USD" values={{ payout }} />
-              </span>
-            )}
-          </span>
-        )}
-      </Button>
-    ),
-    // Block — squared, bold, payout shown as a badge on the right.
-    b: () => (
-      <Button
-        className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-base font-bold"
-        disabled={disabled}
-        onClick={onBuy}
-      >
-        <span className="flex w-full items-center justify-between px-1">
-          <span>{isBuying ? localize('Purchasing...') : localize('Buy')}</span>
-          {payout && (
-            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium">
-              {payout} USD
-            </span>
-          )}
-        </span>
-      </Button>
-    ),
-    // Gradient with an upward-trend icon + payout below.
-    c: () => (
-      <Button
-        className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-primary/70 hover:opacity-90 text-primary-foreground shadow-lg shadow-primary/20"
-        disabled={disabled}
-        onClick={onBuy}
-      >
-        <span className="flex flex-col items-center leading-tight gap-0.5">
-          <span className="flex items-center gap-1.5 font-semibold">
-            <TrendingUp className="h-4 w-4" />
-            {isBuying ? localize('Purchasing...') : localize('Buy')}
-          </span>
-          {payout && (
-            <span className="text-xs font-normal opacity-90">
-              <Localize i18n_default_text="Payout {{payout}} USD" values={{ payout }} />
-            </span>
-          )}
-        </span>
-      </Button>
-    ),
+  const handleClick = () => {
+    if (bot) {
+      if (isRunning) {
+        bot.stopBot();
+      } else {
+        bot.startBot();
+      }
+    } else if (onBuy) {
+      onBuy();
+    }
   };
-  return (variants[variant] ?? variants.a)();
+
+  if (isRunning) {
+    return (
+      <Button
+        type="button"
+        className="w-full h-13 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-base shadow-sm transition-all flex items-center justify-between px-4"
+        onClick={handleClick}
+      >
+        <span className="flex items-center gap-2">
+          <Square className="w-4 h-4 fill-current" />
+          <span>STOP BOT</span>
+        </span>
+        <span className="text-xs bg-rose-700/80 px-2.5 py-1 rounded-full font-mono">
+          {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`}
+        </span>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      className="w-full h-13 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-sm transition-all flex items-center justify-between px-4"
+      disabled={!isConnected}
+      onClick={handleClick}
+    >
+      <span className="flex items-center gap-2">
+        <Play className="w-4 h-4 fill-current" />
+        <span>START AUTO BOT</span>
+      </span>
+      <span className="text-xs bg-emerald-700/80 px-2.5 py-1 rounded-full font-mono">
+        ${currentStake.toFixed(2)} USD
+      </span>
+    </Button>
+  );
 }
 
 export interface ConfigurableTradeControlsProps {
@@ -193,6 +179,7 @@ export interface ConfigurableTradeControlsProps {
    * in a selectable row).
    */
   chartSlot?: React.ReactNode;
+  bot?: UseAutoTradingBotReturn;
 }
 
 export function ConfigurableTradeControls(props: ConfigurableTradeControlsProps) {
@@ -557,7 +544,7 @@ export function ConfigurableTradeControls(props: ConfigurableTradeControlsProps)
     );
   };
 
-  // ── Buy (3 styles, themed) ──────────────────────────────────────────────
+  // ── Start / Stop Bot ────────────────────────────────────────────────────
   const renderBuy = () => (
     <ConfigurableBuyButton
       variant={config.styles.buy}
@@ -565,6 +552,7 @@ export function ConfigurableTradeControls(props: ConfigurableTradeControlsProps)
       proposal={proposal}
       onBuy={onBuy}
       isBuying={isBuying}
+      bot={props.bot}
     />
   );
 

@@ -16,7 +16,9 @@ import { useContractMarkers } from '@/hooks/use-contract-markers';
 import { useCallback, useMemo, useState, type CSSProperties } from 'react';
 import { Ban } from 'lucide-react';
 import { TradeControls } from './trade-controls';
+import { BotControls } from './bot-controls';
 import { ConfigurableTradeControls, ConfigurableBuyButton } from './configurable-trade-controls';
+import type { UseAutoTradingBotReturn } from '@/hooks/use-auto-trading-bot';
 import type { RiseFallAppConfig } from '../lib/app-config';
 
 /**
@@ -171,6 +173,9 @@ export interface RiseFallViewProps {
   rearrangeMode?: boolean;
   /** Called with the new block order after a drag-drop reorder. */
   onReorder?: (order: RiseFallAppConfig['order']) => void;
+  bot?: UseAutoTradingBotReturn;
+  showLoginPrompt?: boolean;
+  setShowLoginPrompt?: (val: boolean) => void;
 }
 
 export function RiseFallView({
@@ -227,48 +232,37 @@ export function RiseFallView({
   selectedKey,
   rearrangeMode,
   onReorder,
+  bot,
+  showLoginPrompt: externalShowLoginPrompt,
+  setShowLoginPrompt: externalSetShowLoginPrompt,
 }: RiseFallViewProps) {
   const { localize } = useAppTranslations();
   const isMobile = useIsMobile();
   const chartHidden = appConfig?.chart?.hidden ?? false;
-  // Pinning is a mobile affordance: on desktop the controls card grows to fit,
-  // so the Buy button is never scroll-clipped and a viewport-wide bar under a
-  // 400px column would look detached.
   const pinBuy = !!appConfig?.buy?.pinned && isMobile;
-  // With Buy unpinned the footer still has to sit at the end of the mobile
-  // column — and a `fixed` footer makes that column reserve clearance for it.
-  // That reservation was a guess (`pb-28`, 112px) for a footer that measures
-  // 40px, leaving 72px of dead space under the Buy button at the bottom of the
-  // scroll. Rendering it in flow, exactly as PinnedBuyBar does, ends the column
-  // where the footer begins and removes the number to guess.
-  //
-  // Note what this does NOT depend on: `buy.pinned`. Every no-code mobile
-  // render gets the in-flow band, so an existing unpinned project also moves
-  // off the translucent `fixed` footer on its next redeploy. That is deliberate
-  // — it is the dead-space fix — but it means the backward-compatibility rule
-  // covers Buy's PLACEMENT, not the footer treatment: a pre-existing project
-  // keeps Buy scrolling in the column, while its footer becomes the opaque
-  // bordered band. A footer that moved after a redeploy is expected here, not a
-  // regression.
   const inFlowFooter = !!appConfig && isMobile;
   const contractMarkers = useContractMarkers(openPositions, activeSymbol?.underlying_symbol, isMobile);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [internalShowLoginPrompt, setInternalShowLoginPrompt] = useState(false);
+  const showLoginPrompt = externalShowLoginPrompt !== undefined ? externalShowLoginPrompt : internalShowLoginPrompt;
+  const setShowLoginPrompt = externalSetShowLoginPrompt || setInternalShowLoginPrompt;
 
-  // Logged-out Buy opens the login/sign-up prompt instead of sending a buy that
-  // would fail with a "Purchase Failed" toast. One gate covers every Buy
-  // surface (standard, configurable, pinned). Edit mode stays inert — the
-  // editor owns Buy clicks there, and its auth actions are already no-ops.
   const handleBuy = useCallback(async () => {
     if (editMode) return;
-    // Mid-OAuth (the ?code= callback) the header already shows a login in
-    // progress — don't stack a "please log in" prompt on top of it.
     if (authState === 'authenticating') return;
     if (authState !== 'authenticated') {
       setShowLoginPrompt(true);
       return;
     }
+    if (bot) {
+      if (bot.isRunning) {
+        bot.stopBot();
+      } else {
+        bot.startBot();
+      }
+      return;
+    }
     await buyContract();
-  }, [editMode, authState, buyContract]);
+  }, [editMode, authState, bot, buyContract, setShowLoginPrompt]);
 
   // In edit mode, login/sign-up/account actions are inert (no OAuth navigation
   // out of the editor) — only the theme toggle stays interactive.
@@ -434,21 +428,19 @@ export function RiseFallView({
         rearrangeMode={rearrangeMode}
         onReorder={onReorder}
         pinBuy={pinBuy}
+        bot={bot}
       />
     ) : null;
 
   return (
     <main
-      className={`flex flex-col max-lg:h-dvh lg:overflow-visible ${
-        editMode ? 'bg-muted/50' : 'bg-background'
+      className={`flex flex-col min-h-dvh max-lg:h-dvh lg:overflow-visible ${
+        editMode ? 'bg-slate-100' : 'bg-slate-50'
       }`}
     >
       {editMode ? (
         <div className="group/hdr sticky top-0 z-50">
           {headerEl}
-          {/* Hover hint: a ring + a LEFT-aligned chip so it never covers the
-              right-side theme toggle (which stays usable). pointer-events-none
-              so nothing here blocks clicks. */}
           <div className="pointer-events-none absolute inset-0 z-[60] opacity-0 ring-2 ring-inset ring-muted-foreground/25 transition-opacity group-hover/hdr:opacity-100">
             <span className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5 rounded-md bg-background/90 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm ring-1 ring-border">
               <Ban className="h-3.5 w-3.5" />
@@ -462,63 +454,22 @@ export function RiseFallView({
 
       {appConfig ? (
         isMobile ? (
-          /* No-code mobile layout: a single, reorderable column of blocks. The
-             chart + symbol dropdown is one block (chartSlot); controls follow
-             the configured order. */
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 py-3">
-              {isLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : renderConfigurable(true)}
-            </div>
-          </div>
-        ) : chartHidden ? (
-          /* No-code desktop, chart OFF: a single centered column (symbol picker
-             + controls stacked) at the controls' width — no wide empty chart
-             column, and the height grows to fit its content (no inner scroll). */
-          <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4">
-            {isLoading ? (
-              <Skeleton className="h-96 w-full rounded-xl" />
-            ) : (
-              renderConfigurable(true)
-            )}
-          </div>
-        ) : (
-          /* No-code desktop, chart ON: 2-column (chart left, controls card
-             right). The card grows to its content height (no fixed height /
-             inner scrollbar) — desktop has the vertical space. */
-          <div className="flex w-full max-w-7xl mx-auto flex-col px-4 py-4 gap-3">
-            <div className="grid grid-cols-[1fr_400px] gap-4 items-start">
-              <div>{chartBlock}</div>
               {isLoading ? (
-                <Skeleton className="h-[min(33.6rem,66vh)] min-h-[384px] w-full rounded-xl" />
+                <Skeleton className="h-48 w-full rounded-xl" />
               ) : (
-                <Card>
-                  <CardContent className="pt-4">{renderConfigurable(false)}</CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        )
-      ) : (
-        /* Standard layout (unchanged): 2-column chart + controls card. */
-        <div className="flex w-full max-w-7xl mx-auto flex-col max-lg:px-0 max-lg:py-0 px-3 py-2 sm:px-4 sm:py-4 gap-2 sm:gap-3 max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-hidden lg:flex-none lg:overflow-visible">
-          <div className="max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0 lg:grid lg:grid-cols-[1fr_400px] lg:gap-4">
-            <div className="max-lg:shrink-0 flex flex-col gap-2 max-lg:px-3 max-lg:pb-2 pt-2 lg:py-0">
-              {chartBlock}
-            </div>
-            <div className="max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-3 max-lg:border-t max-lg:border-border max-lg:pt-3 max-lg:pb-28 lg:pt-0 flex flex-col gap-3">
-              {isLoading ? (
-                <Skeleton className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] max-lg:h-48 w-full rounded-xl" />
-              ) : (
-                <Card className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] lg:overflow-y-auto">
-                  <CardContent className="pt-4">
-                    <TradeControls
+                <>
+                  {chartBlock}
+                  {bot ? (
+                    <BotControls
+                      bot={bot}
+                      isConnected={isConnected}
+                      activeSymbol={activeSymbol}
                       direction={direction}
                       onDirectionChange={setDirection}
                       allowEquals={allowEquals}
                       onAllowEqualsChange={setAllowEquals}
-                      isConnected={isConnected}
-                      stake={stake}
-                      onStakeChange={setStake}
                       duration={duration}
                       onDurationChange={setDuration}
                       durationOptions={durationOptions}
@@ -529,17 +480,126 @@ export function RiseFallView({
                       endTime={endTime}
                       onEndTimeChange={setEndTime}
                       ws={ws}
-                      activeSymbol={activeSymbol}
                       proposal={proposal}
-                      onBuy={handleBuy}
-                      isBuying={isBuying}
-                      buyResult={buyResult}
-                      buyError={buyError}
-                      onClearBuyResult={clearBuyResult}
                       isAuthenticated={authState === 'authenticated'}
                     />
-                  </CardContent>
-                </Card>
+                  ) : (
+                    renderConfigurable(true)
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        ) : chartHidden ? (
+          <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4">
+            {isLoading ? (
+              <Skeleton className="h-96 w-full rounded-xl" />
+            ) : bot ? (
+              <BotControls
+                bot={bot}
+                isConnected={isConnected}
+                activeSymbol={activeSymbol}
+                direction={direction}
+                onDirectionChange={setDirection}
+                allowEquals={allowEquals}
+                onAllowEqualsChange={setAllowEquals}
+                duration={duration}
+                onDurationChange={setDuration}
+                durationOptions={durationOptions}
+                durationUnit={durationUnit}
+                onDurationUnitChange={setDurationUnit}
+                endDate={endDate}
+                onEndDateChange={setEndDate}
+                endTime={endTime}
+                onEndTimeChange={setEndTime}
+                ws={ws}
+                proposal={proposal}
+                isAuthenticated={authState === 'authenticated'}
+              />
+            ) : (
+              renderConfigurable(true)
+            )}
+          </div>
+        ) : (
+          <div className="flex w-full max-w-7xl mx-auto flex-col px-4 py-4 gap-3">
+            <div className="grid grid-cols-[1fr_420px] gap-4 items-start">
+              <div>{chartBlock}</div>
+              {isLoading ? (
+                <Skeleton className="h-[min(33.6rem,66vh)] min-h-[384px] w-full rounded-xl" />
+              ) : (
+                <div className="lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto pr-1">
+                  {bot ? (
+                    <BotControls
+                      bot={bot}
+                      isConnected={isConnected}
+                      activeSymbol={activeSymbol}
+                      direction={direction}
+                      onDirectionChange={setDirection}
+                      allowEquals={allowEquals}
+                      onAllowEqualsChange={setAllowEquals}
+                      duration={duration}
+                      onDurationChange={setDuration}
+                      durationOptions={durationOptions}
+                      durationUnit={durationUnit}
+                      onDurationUnitChange={setDurationUnit}
+                      endDate={endDate}
+                      onEndDateChange={setEndDate}
+                      endTime={endTime}
+                      onEndTimeChange={setEndTime}
+                      ws={ws}
+                      proposal={proposal}
+                      isAuthenticated={authState === 'authenticated'}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-4">{renderConfigurable(false)}</CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="flex w-full max-w-7xl mx-auto flex-col max-lg:px-0 max-lg:py-0 px-3 py-2 sm:px-4 sm:py-4 gap-2 sm:gap-3 max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-hidden lg:flex-none lg:overflow-visible">
+          <div className="max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0 lg:grid lg:grid-cols-[1fr_420px] lg:gap-4">
+            <div className="max-lg:shrink-0 flex flex-col gap-2 max-lg:px-3 max-lg:pb-2 pt-2 lg:py-0">
+              {chartBlock}
+            </div>
+            <div className="max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-3 max-lg:border-t max-lg:border-border max-lg:pt-3 max-lg:pb-28 lg:pt-0 flex flex-col gap-3">
+              {isLoading ? (
+                <Skeleton className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] max-lg:h-48 w-full rounded-xl" />
+              ) : (
+                <div className="lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto pr-1">
+                  <TradeControls
+                    direction={direction}
+                    onDirectionChange={setDirection}
+                    allowEquals={allowEquals}
+                    onAllowEqualsChange={setAllowEquals}
+                    isConnected={isConnected}
+                    stake={stake}
+                    onStakeChange={setStake}
+                    duration={duration}
+                    onDurationChange={setDuration}
+                    durationOptions={durationOptions}
+                    durationUnit={durationUnit}
+                    onDurationUnitChange={setDurationUnit}
+                    endDate={endDate}
+                    onEndDateChange={setEndDate}
+                    endTime={endTime}
+                    onEndTimeChange={setEndTime}
+                    ws={ws}
+                    activeSymbol={activeSymbol}
+                    proposal={proposal}
+                    onBuy={handleBuy}
+                    isBuying={isBuying}
+                    buyResult={buyResult}
+                    buyError={buyError}
+                    onClearBuyResult={clearBuyResult}
+                    isAuthenticated={authState === 'authenticated'}
+                    bot={bot}
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -552,7 +612,7 @@ export function RiseFallView({
           rearrangeMode={rearrangeMode}
           selected={selectedKey === 'buy'}
           onSelect={() => onSelect?.('buy')}
-          label={localize('Buy button')}
+          label={localize('Start / Stop Bot')}
         >
           <ConfigurableBuyButton
             variant={appConfig!.styles.buy}
@@ -560,13 +620,10 @@ export function RiseFallView({
             proposal={proposal}
             onBuy={handleBuy}
             isBuying={isBuying}
+            bot={bot}
           />
         </PinnedBuyBar>
       ) : inFlowFooter ? (
-        /* Unpinned mobile: the same band the pinned bar ends in, minus the Buy
-           button — in flow at the end of the h-dvh column, so the scroll area
-           ends where it begins and nothing reserves clearance for it. Sharing
-           the band is what keeps the footer from moving when the pin toggles. */
         <FooterBar />
       ) : (
         /* Fixed footer — desktop and the standard layout, which scroll the

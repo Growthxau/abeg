@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * The real, functional Rise/Fall app (live WebSocket, real auth/trading),
- * rendered via RiseFallView. Optionally takes a no-code `appConfig` to render
- * the configurable control styles/order. Shared by the deployed page and the
- * editor (/edit) so the editor preview is fully live.
+ * The real, functional Rise/Fall Auto Trading Bot app (live WebSocket, real auth/trading),
+ * rendered via RiseFallView. Optionally takes a no-code `appConfig`.
  */
 
+import { useState } from 'react';
 import { useSmartChartsApi } from '@/hooks/use-smartcharts-api';
 import { useSmartChartChartData } from '@/hooks/use-smartchart-chart-data';
 import { useRiseFallTrading } from '../hooks/use-rise-fall-trading';
+import { useAutoTradingBot } from '@/hooks/use-auto-trading-bot';
 import { useDerivWSContext } from '@/components/custom/deriv-ws-provider';
 import { useLogoSrc } from '@/components/custom/logo-src-provider';
 import { RiseFallView } from './rise-fall-view';
@@ -32,7 +32,6 @@ export function LiveRiseFall({
   selectedKey?: string | null;
   rearrangeMode?: boolean;
   onReorder?: (order: RiseFallAppConfig['order']) => void;
-  /** Override the provider logo — used by the editor to show the previewed logo. */
   logoSrc?: string;
   appName?: string;
   showAppName?: boolean;
@@ -41,6 +40,7 @@ export function LiveRiseFall({
   const logoSrc = logoSrcOverride ?? providerLogo;
   const { ws, isConnected, isExhausted, auth } = useDerivWSContext();
   const { authState, accounts, activeAccount, login, signUp, logout, switchAccount } = auth;
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const trading = useRiseFallTrading({
     ws,
@@ -52,6 +52,25 @@ export function LiveRiseFall({
 
   const { chartData } = useSmartChartChartData(trading.ws, trading.isConnected, trading.symbols);
   const { getQuotes, subscribeQuotes, unsubscribeQuotes } = useSmartChartsApi(trading.ws);
+
+  const bot = useAutoTradingBot({
+    ws: trading.ws,
+    isConnected: trading.isConnected,
+    isAuthenticated: !!auth.wsUrl,
+    activeSymbol: trading.activeSymbol,
+    prices: trading.prices,
+    direction: trading.direction,
+    setDirection: trading.setDirection,
+    stake: trading.stake,
+    setStake: trading.setStake,
+    allowEquals: trading.allowEquals,
+    proposal: trading.proposal,
+    buyContract: trading.buyContract,
+    isBuying: trading.isBuying,
+    buyResult: trading.buyResult,
+    buyError: trading.buyError,
+    onRequireAuth: () => setShowLoginPrompt(true),
+  });
 
   return (
     <RiseFallView
@@ -108,6 +127,9 @@ export function LiveRiseFall({
       selectedKey={selectedKey}
       rearrangeMode={rearrangeMode}
       onReorder={onReorder}
+      bot={bot}
+      showLoginPrompt={showLoginPrompt}
+      setShowLoginPrompt={setShowLoginPrompt}
     />
   );
 }
