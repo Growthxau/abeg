@@ -395,206 +395,41 @@ export function RiseFallView({
     ) : null;
 
   return (
-    <main
-      className={`flex flex-col min-h-dvh ${
-        editMode ? 'bg-slate-100' : 'bg-slate-50'
-      } text-slate-900`}
-    >
-      {editMode ? (
-        <div className="group/hdr sticky top-0 z-50">
+    <div className="min-h-dvh bg-slate-950 flex items-center justify-center p-0 sm:p-4">
+      <main className="max-w-[420px] w-full mx-auto my-0 sm:my-2 min-h-dvh sm:min-h-[844px] sm:max-h-[94vh] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden overflow-y-auto">
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
           {headerEl}
-          <div className="pointer-events-none absolute inset-0 z-[60] opacity-0 ring-2 ring-inset ring-muted-foreground/25 transition-opacity group-hover/hdr:opacity-100">
-            <span className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5 rounded-md bg-background/90 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm ring-1 ring-border">
-              <Ban className="h-3.5 w-3.5" />
-              <Localize i18n_default_text="Not editable" />
-            </span>
-          </div>
         </div>
-      ) : (
-        headerEl
-      )}
 
-      {appConfig ? (
-        isMobile ? (
-          <div className="w-full flex-1">
-            <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 py-3">
-              {isLoading ? (
-                <Skeleton className="h-48 w-full rounded-xl" />
-              ) : (
-                <>
-                  {chartBlock}
-                  {bot ? (
-                    <BotControls
-                      bot={bot}
-                      isConnected={isConnected}
-                      activeSymbol={activeSymbol}
-                      direction={direction}
-                      onDirectionChange={setDirection}
-                      allowEquals={allowEquals}
-                      onAllowEqualsChange={setAllowEquals}
-                      duration={duration}
-                      onDurationChange={setDuration}
-                      durationOptions={durationOptions}
-                      durationUnit={durationUnit}
-                      onDurationUnitChange={setDurationUnit}
-                      endDate={endDate}
-                      onEndDateChange={setEndDate}
-                      endTime={endTime}
-                      onEndTimeChange={setEndTime}
-                      ws={ws}
-                      proposal={proposal}
-                      isAuthenticated={authState === 'authenticated'}
-                    />
-                  ) : (
-                    renderConfigurable(true)
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        ) : chartHidden ? (
-          <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4 flex-1">
-            {isLoading ? (
-              <Skeleton className="h-96 w-full rounded-xl" />
-            ) : bot ? (
-              <BotControls
-                bot={bot}
-                isConnected={isConnected}
-                activeSymbol={activeSymbol}
-                direction={direction}
-                onDirectionChange={setDirection}
-                allowEquals={allowEquals}
-                onAllowEqualsChange={setAllowEquals}
-                duration={duration}
-                onDurationChange={setDuration}
-                durationOptions={durationOptions}
-                durationUnit={durationUnit}
-                onDurationUnitChange={setDurationUnit}
-                endDate={endDate}
-                onEndDateChange={setEndDate}
-                endTime={endTime}
-                onEndTimeChange={setEndTime}
-                ws={ws}
-                proposal={proposal}
-                isAuthenticated={authState === 'authenticated'}
-              />
-            ) : (
-              renderConfigurable(true)
-            )}
-          </div>
-        ) : (
-          <div className="flex w-full max-w-7xl mx-auto flex-col px-4 py-4 gap-3 flex-1">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_430px] gap-4 items-start">
-              <div className="lg:sticky lg:top-4">{chartBlock}</div>
-              {isLoading ? (
-                <Skeleton className="h-[min(33.6rem,66vh)] min-h-[384px] w-full rounded-xl" />
-              ) : (
-                <div>
-                  {bot ? (
-                    <BotControls
-                      bot={bot}
-                      isConnected={isConnected}
-                      activeSymbol={activeSymbol}
-                      direction={direction}
-                      onDirectionChange={setDirection}
-                      allowEquals={allowEquals}
-                      onAllowEqualsChange={setAllowEquals}
-                      duration={duration}
-                      onDurationChange={setDuration}
-                      durationOptions={durationOptions}
-                      durationUnit={durationUnit}
-                      onDurationUnitChange={setDurationUnit}
-                      endDate={endDate}
-                      onEndDateChange={setEndDate}
-                      endTime={endTime}
-                      onEndTimeChange={setEndTime}
-                      ws={ws}
-                      proposal={proposal}
-                      isAuthenticated={authState === 'authenticated'}
-                    />
-                  ) : (
-                    <Card>
-                      <CardContent className="pt-4">{renderConfigurable(false)}</CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      ) : (
-        <div className="flex w-full max-w-7xl mx-auto flex-col px-3 py-3 sm:px-4 sm:py-4 gap-3 flex-1">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_430px] gap-4 items-start">
-            <div className="lg:sticky lg:top-4">{chartBlock}</div>
-            <div>
-              {isLoading ? (
-                <Skeleton className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] max-lg:h-48 w-full rounded-xl" />
-              ) : (
-                <TradeControls
-                  direction={direction}
-                  onDirectionChange={setDirection}
-                  allowEquals={allowEquals}
-                  onAllowEqualsChange={setAllowEquals}
-                  isConnected={isConnected}
-                  stake={stake}
-                  onStakeChange={setStake}
-                  duration={duration}
-                  onDurationChange={setDuration}
-                  durationOptions={durationOptions}
-                  durationUnit={durationUnit}
-                  onDurationUnitChange={setDurationUnit}
-                  endDate={endDate}
-                  onEndDateChange={setEndDate}
-                  endTime={endTime}
-                  onEndTimeChange={setEndTime}
-                  ws={ws}
-                  activeSymbol={activeSymbol}
-                  proposal={proposal}
-                  onBuy={handleBuy}
-                  isBuying={isBuying}
-                  buyResult={buyResult}
-                  buyError={buyError}
-                  onClearBuyResult={clearBuyResult}
-                  isAuthenticated={authState === 'authenticated'}
-                  bot={bot}
-                />
-              )}
-            </div>
-          </div>
+        <div className="w-full flex-1 p-3">
+          {isLoading ? (
+            <Skeleton className="h-48 w-full rounded-xl" />
+          ) : bot ? (
+            <BotControls
+              bot={bot}
+              isConnected={isConnected}
+              activeSymbol={activeSymbol}
+              direction={direction}
+              onDirectionChange={setDirection}
+              allowEquals={allowEquals}
+              onAllowEqualsChange={setAllowEquals}
+              duration={duration}
+              onDurationChange={setDuration}
+              durationOptions={durationOptions}
+              durationUnit={durationUnit}
+              onDurationUnitChange={setDurationUnit}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              endTime={endTime}
+              onEndTimeChange={setEndTime}
+              ws={ws}
+              proposal={proposal}
+              isAuthenticated={authState === 'authenticated'}
+            />
+          ) : null}
         </div>
-      )}
-
-      {pinBuy ? (
-        <PinnedBuyBar
-          editMode={editMode}
-          rearrangeMode={rearrangeMode}
-          selected={selectedKey === 'buy'}
-          onSelect={() => onSelect?.('buy')}
-          label={localize('Start / Stop Bot')}
-        >
-          <ConfigurableBuyButton
-            variant={appConfig!.styles.buy}
-            isConnected={isConnected}
-            proposal={proposal}
-            onBuy={handleBuy}
-            isBuying={isBuying}
-            bot={bot}
-          />
-        </PinnedBuyBar>
-      ) : inFlowFooter ? (
-        <FooterBar />
-      ) : (
-        <div className="py-3 text-center bg-slate-50/90 border-t border-slate-200/70 mt-auto">
-          <Footer />
-        </div>
-      )}
-
-      <LoginPromptDialog
-        open={showLoginPrompt}
-        onOpenChange={setShowLoginPrompt}
-        onLogin={editMode ? noopAsyncAuth : onLogin}
-        onSignUp={editMode ? noopAsyncAuth : onSignUp}
-      />
-    </main>
+      </main>
+    </div>
   );
+
 }

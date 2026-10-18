@@ -74,7 +74,7 @@ export interface AiSignalData {
 export const SETTINGS_STORAGE_KEY = 'deriv_bot_risk_settings_v2';
 
 export const DEFAULT_BOT_SETTINGS: BotSettings = {
-  strategy: 'ai_gemini',
+  strategy: 'volatility_breakout',
   moneyManagement: 'martingale',
   baseStake: 10,
   martingaleMultiplier: 2.0,
@@ -83,7 +83,7 @@ export const DEFAULT_BOT_SETTINGS: BotSettings = {
   maxConsecutiveLosses: 5,
   maxRuns: 20,
   cooldownSeconds: 2,
-  deviationMultiplier: 2.0,
+  deviationMultiplier: 1.5,
   deviationPeriod: 15,
   minAiConfidence: 65,
 };

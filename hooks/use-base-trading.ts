@@ -85,6 +85,15 @@ export function useBaseTrading({
 
   const { currentTick, prices, pipSize } = useTicks(ws, isConnected, activeSymbol);
 
+  useEffect(() => {
+    if (symbols.length > 0) {
+      const v100 = symbols.find(s => s.underlying_symbol === 'R_100' || s.underlying_symbol_name?.includes('100 (1s)'));
+      if (v100 && activeSymbol?.underlying_symbol !== v100.underlying_symbol) {
+        selectSymbol(v100.underlying_symbol);
+      }
+    }
+  }, [symbols, activeSymbol, selectSymbol]);
+
   // Surface WS-level errors as toasts. Buy and sell errors are handled by
   // their own hooks and are excluded here to avoid double-reporting.
   useEffect(() => {
