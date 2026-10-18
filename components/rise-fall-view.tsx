@@ -75,12 +75,7 @@ import type { UseSmartChartsApiReturn } from '@/hooks/use-smartcharts-api';
 import type { SmartChartChartData } from '@/hooks/use-smartchart-chart-data';
 import type { OpenPosition } from '../lib/types';
 
-const RiseFallChart = dynamic(() => import('./rise-fall-chart').then(module => module.RiseFallChart), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full w-full animate-pulse rounded-md border border-border/50 dark:border-white/[0.08] bg-muted/30" />
-  ),
-});
+import { MarketLiveTicker } from '@/components/market-live-ticker';
 
 // Edit-mode stand-in for the login prompt's auth handlers — same rule as the
 // header: no OAuth navigation out of the editor.
@@ -139,11 +134,11 @@ export interface RiseFallViewProps {
   sellContract: (contractId: number, bidPrice: string) => Promise<void>;
   sellingId: number | null;
 
-  // Chart data (elevated to page so preview can inject frozen mocks)
-  chartData: SmartChartChartData | undefined;
-  getQuotes: UseSmartChartsApiReturn['getQuotes'];
-  subscribeQuotes: UseSmartChartsApiReturn['subscribeQuotes'];
-  unsubscribeQuotes: UseSmartChartsApiReturn['unsubscribeQuotes'];
+  // Chart data (optional, SmartChart has been completely removed)
+  chartData?: SmartChartChartData;
+  getQuotes?: UseSmartChartsApiReturn['getQuotes'];
+  subscribeQuotes?: UseSmartChartsApiReturn['subscribeQuotes'];
+  unsubscribeQuotes?: UseSmartChartsApiReturn['unsubscribeQuotes'];
   /** Passed to SmartChart. Set to false for a frozen preview. Defaults to true. */
   isLive?: boolean;
   /**
@@ -239,8 +234,9 @@ export function RiseFallView({
   const { localize } = useAppTranslations();
   const isMobile = useIsMobile();
   const chartHidden = appConfig?.chart?.hidden ?? false;
-  const pinBuy = !!appConfig?.buy?.pinned && isMobile;
-  const inFlowFooter = !!appConfig && isMobile;
+  // Never render a duplicate pinned buy button when Auto Trading Bot is active
+  const pinBuy = !bot && !!appConfig?.buy?.pinned && isMobile;
+  const inFlowFooter = !bot && !!appConfig && isMobile;
   const contractMarkers = useContractMarkers(openPositions, activeSymbol?.underlying_symbol, isMobile);
   const [internalShowLoginPrompt, setInternalShowLoginPrompt] = useState(false);
   const showLoginPrompt = externalShowLoginPrompt !== undefined ? externalShowLoginPrompt : internalShowLoginPrompt;
@@ -302,71 +298,37 @@ export function RiseFallView({
   // and as a reorderable block in the no-code layout. When the chart is hidden,
   // the SmartChart is NOT mounted at all (so nothing bleeds through) and a
   // standalone Symbol Selector takes its place so users can still switch markets.
+  // The Market Ticker & Volatility Deviation block. Completely replaces the heavy SmartChart
+  // with a lightweight, responsive live price ticker, real-time SVG sparkline,
+  // volatility breakout deviation gauge, and symbol browser.
   const chartBlock = useMemo(
-    () =>
-      chartHidden ? (
-        <div className="rf-chart-hidden relative">
-          <div className={editMode ? 'pointer-events-none select-none' : ''}>
-            <SymbolSelector
-              symbols={symbols}
-              activeSymbol={activeSymbol}
-              onSymbolChange={selectSymbol}
-              prices={prices}
-              pipSize={pipSize}
-            />
-          </div>
-          {editMode && !rearrangeMode && (
-            <FixedZone label={localize('Symbol picker')} style={{ top: 0, bottom: 0 }} />
-          )}
+    () => (
+      <div className="relative w-full">
+        <div className={editMode ? 'pointer-events-none select-none' : ''}>
+          <MarketLiveTicker
+            symbols={symbols}
+            activeSymbol={activeSymbol}
+            onSymbolChange={selectSymbol}
+            prices={prices ?? []}
+            pipSize={pipSize}
+            bot={bot}
+            isConnected={isConnected}
+          />
         </div>
-      ) : (
-        <div className="relative max-lg:h-[45dvh] lg:h-[min(33.6rem,66vh)] lg:min-h-[384px]">
-          <div className={`h-full ${editMode ? 'pointer-events-none select-none' : ''}`}>
-            {chartData ? (
-              <RiseFallChart
-                symbolKey="rise-fall-chart"
-                symbol={activeSymbol?.underlying_symbol}
-                isConnectionOpened={isConnected}
-                isMobile={isMobile}
-                chartData={chartData}
-                getQuotes={getQuotes}
-                subscribeQuotes={subscribeQuotes}
-                unsubscribeQuotes={unsubscribeQuotes}
-                onSymbolChange={selectSymbol}
-                isLive={isLive}
-                endEpoch={endEpoch}
-                contractsArray={contractMarkers}
-              />
-            ) : (
-              <Skeleton className="h-full w-full rounded-md" />
-            )}
-          </div>
-
-          {editMode && !rearrangeMode && (
-            <>
-              <FixedZone label={localize('Symbol picker')} style={{ top: 0, height: 54 }} />
-              <FixedZone label={localize('Chart')} style={{ top: 54, bottom: 0 }} />
-            </>
-          )}
-        </div>
-      ),
+        {editMode && !rearrangeMode && (
+          <FixedZone label={localize('Market & Ticker')} style={{ top: 0, bottom: 0 }} />
+        )}
+      </div>
+    ),
     [
-      chartHidden,
       symbols,
+      activeSymbol,
+      selectSymbol,
       prices,
       pipSize,
-      editMode,
-      chartData,
-      activeSymbol,
+      bot,
       isConnected,
-      isMobile,
-      getQuotes,
-      subscribeQuotes,
-      unsubscribeQuotes,
-      selectSymbol,
-      isLive,
-      endEpoch,
-      contractMarkers,
+      editMode,
       rearrangeMode,
       localize,
     ]
@@ -434,9 +396,9 @@ export function RiseFallView({
 
   return (
     <main
-      className={`flex flex-col min-h-dvh max-lg:h-dvh lg:overflow-visible ${
+      className={`flex flex-col min-h-dvh ${
         editMode ? 'bg-slate-100' : 'bg-slate-50'
-      }`}
+      } text-slate-900`}
     >
       {editMode ? (
         <div className="group/hdr sticky top-0 z-50">
@@ -454,7 +416,7 @@ export function RiseFallView({
 
       {appConfig ? (
         isMobile ? (
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="w-full flex-1">
             <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 py-3">
               {isLoading ? (
                 <Skeleton className="h-48 w-full rounded-xl" />
@@ -491,7 +453,7 @@ export function RiseFallView({
             </div>
           </div>
         ) : chartHidden ? (
-          <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4">
+          <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4 flex-1">
             {isLoading ? (
               <Skeleton className="h-96 w-full rounded-xl" />
             ) : bot ? (
@@ -521,13 +483,13 @@ export function RiseFallView({
             )}
           </div>
         ) : (
-          <div className="flex w-full max-w-7xl mx-auto flex-col px-4 py-4 gap-3">
-            <div className="grid grid-cols-[1fr_420px] gap-4 items-start">
-              <div>{chartBlock}</div>
+          <div className="flex w-full max-w-7xl mx-auto flex-col px-4 py-4 gap-3 flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_430px] gap-4 items-start">
+              <div className="lg:sticky lg:top-4">{chartBlock}</div>
               {isLoading ? (
                 <Skeleton className="h-[min(33.6rem,66vh)] min-h-[384px] w-full rounded-xl" />
               ) : (
-                <div className="lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto pr-1">
+                <div>
                   {bot ? (
                     <BotControls
                       bot={bot}
@@ -561,45 +523,41 @@ export function RiseFallView({
           </div>
         )
       ) : (
-        <div className="flex w-full max-w-7xl mx-auto flex-col max-lg:px-0 max-lg:py-0 px-3 py-2 sm:px-4 sm:py-4 gap-2 sm:gap-3 max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-hidden lg:flex-none lg:overflow-visible">
-          <div className="max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0 lg:grid lg:grid-cols-[1fr_420px] lg:gap-4">
-            <div className="max-lg:shrink-0 flex flex-col gap-2 max-lg:px-3 max-lg:pb-2 pt-2 lg:py-0">
-              {chartBlock}
-            </div>
-            <div className="max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-3 max-lg:border-t max-lg:border-border max-lg:pt-3 max-lg:pb-28 lg:pt-0 flex flex-col gap-3">
+        <div className="flex w-full max-w-7xl mx-auto flex-col px-3 py-3 sm:px-4 sm:py-4 gap-3 flex-1">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_430px] gap-4 items-start">
+            <div className="lg:sticky lg:top-4">{chartBlock}</div>
+            <div>
               {isLoading ? (
                 <Skeleton className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] max-lg:h-48 w-full rounded-xl" />
               ) : (
-                <div className="lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto pr-1">
-                  <TradeControls
-                    direction={direction}
-                    onDirectionChange={setDirection}
-                    allowEquals={allowEquals}
-                    onAllowEqualsChange={setAllowEquals}
-                    isConnected={isConnected}
-                    stake={stake}
-                    onStakeChange={setStake}
-                    duration={duration}
-                    onDurationChange={setDuration}
-                    durationOptions={durationOptions}
-                    durationUnit={durationUnit}
-                    onDurationUnitChange={setDurationUnit}
-                    endDate={endDate}
-                    onEndDateChange={setEndDate}
-                    endTime={endTime}
-                    onEndTimeChange={setEndTime}
-                    ws={ws}
-                    activeSymbol={activeSymbol}
-                    proposal={proposal}
-                    onBuy={handleBuy}
-                    isBuying={isBuying}
-                    buyResult={buyResult}
-                    buyError={buyError}
-                    onClearBuyResult={clearBuyResult}
-                    isAuthenticated={authState === 'authenticated'}
-                    bot={bot}
-                  />
-                </div>
+                <TradeControls
+                  direction={direction}
+                  onDirectionChange={setDirection}
+                  allowEquals={allowEquals}
+                  onAllowEqualsChange={setAllowEquals}
+                  isConnected={isConnected}
+                  stake={stake}
+                  onStakeChange={setStake}
+                  duration={duration}
+                  onDurationChange={setDuration}
+                  durationOptions={durationOptions}
+                  durationUnit={durationUnit}
+                  onDurationUnitChange={setDurationUnit}
+                  endDate={endDate}
+                  onEndDateChange={setEndDate}
+                  endTime={endTime}
+                  onEndTimeChange={setEndTime}
+                  ws={ws}
+                  activeSymbol={activeSymbol}
+                  proposal={proposal}
+                  onBuy={handleBuy}
+                  isBuying={isBuying}
+                  buyResult={buyResult}
+                  buyError={buyError}
+                  onClearBuyResult={clearBuyResult}
+                  isAuthenticated={authState === 'authenticated'}
+                  bot={bot}
+                />
               )}
             </div>
           </div>
@@ -626,9 +584,7 @@ export function RiseFallView({
       ) : inFlowFooter ? (
         <FooterBar />
       ) : (
-        /* Fixed footer — desktop and the standard layout, which scroll the
-           document rather than an inner column. */
-        <div className="fixed bottom-0 left-0 right-0 py-2 text-center bg-background/80 backdrop-blur-sm">
+        <div className="py-3 text-center bg-slate-50/90 border-t border-slate-200/70 mt-auto">
           <Footer />
         </div>
       )}

@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
-import type { Direction, DurationSelectUnit, DurationOption } from '../lib/types';
+import type { Direction } from '../lib/types';
+import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
 
 export type BotStrategy =
+  | 'ai_gemini'
+  | 'volatility_breakout'
   | 'trend_following'
   | 'contrarian'
   | 'alternating'
@@ -39,6 +42,7 @@ export interface BotLogEntry {
   profit?: number;
   status: 'PENDING' | 'WON' | 'LOST' | 'ERROR';
   details?: string;
+  strategyUsed?: string;
 }
 
 export interface BotSettings {
@@ -51,7 +55,38 @@ export interface BotSettings {
   maxConsecutiveLosses: number; // 0 = disabled
   maxRuns: number; // 0 = unlimited
   cooldownSeconds: number;
+  // Volatility Breakout settings
+  deviationMultiplier: number;
+  deviationPeriod: number;
+  // AI Settings
+  minAiConfidence: number;
 }
+
+export interface AiSignalData {
+  recommendation: 'CALL' | 'PUT' | 'HOLD';
+  confidence: number;
+  marketRegime: string;
+  reasoning: string;
+  volatilityDeviation: number;
+  isAnalyzing: boolean;
+}
+
+export const SETTINGS_STORAGE_KEY = 'deriv_bot_risk_settings_v2';
+
+export const DEFAULT_BOT_SETTINGS: BotSettings = {
+  strategy: 'ai_gemini',
+  moneyManagement: 'martingale',
+  baseStake: 10,
+  martingaleMultiplier: 2.0,
+  takeProfit: 50,
+  stopLoss: 50,
+  maxConsecutiveLosses: 5,
+  maxRuns: 20,
+  cooldownSeconds: 2,
+  deviationMultiplier: 2.0,
+  deviationPeriod: 15,
+  minAiConfidence: 65,
+};
 
 export interface UseAutoTradingBotParams {
   ws: DerivWS | null;
@@ -87,10 +122,19 @@ export interface UseAutoTradingBotReturn {
   netProfit: number;
   logs: BotLogEntry[];
   activeContractId: number | null;
+  aiSignal: AiSignalData | null;
+  volatilityStats: {
+    upperBand: number;
+    lowerBand: number;
+    mean: number;
+    deviation: number;
+    devScore: number;
+  };
   startBot: () => void;
   stopBot: () => void;
   resetStats: () => void;
   clearLogs: () => void;
+  triggerAiAnalysis: () => Promise<AiSignalData | null>;
 }
 
 export function useAutoTradingBot({
@@ -115,16 +159,15 @@ export function useAutoTradingBot({
   const [botStatus, setBotStatus] = useState<BotStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('Bot is idle. Click Start Bot to begin automated trading.');
 
-  const [settings, setSettings] = useState<BotSettings>({
-    strategy: 'trend_following',
-    moneyManagement: 'martingale',
-    baseStake: 10,
-    martingaleMultiplier: 2.0,
-    takeProfit: 50,
-    stopLoss: 50,
-    maxConsecutiveLosses: 5,
-    maxRuns: 20,
-    cooldownSeconds: 2,
+  // Load initial settings from localStorage if available
+  const [settings, setSettings] = useState<BotSettings>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (saved) return { ...DEFAULT_BOT_SETTINGS, ...JSON.parse(saved) };
+      } catch {}
+    }
+    return DEFAULT_BOT_SETTINGS;
   });
 
   const [currentStake, setCurrentStake] = useState<number>(settings.baseStake);
@@ -135,6 +178,8 @@ export function useAutoTradingBot({
   const [netProfit, setNetProfit] = useState(0);
   const [logs, setLogs] = useState<BotLogEntry[]>([]);
   const [activeContractId, setActiveContractId] = useState<number | null>(null);
+
+  const [aiSignal, setAiSignal] = useState<AiSignalData | null>(null);
 
   // References to keep callbacks current without retriggering loops
   const isRunningRef = useRef(isRunning);
@@ -171,18 +216,60 @@ export function useAutoTradingBot({
   isBuyingRef.current = isBuying;
 
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isAnalyzingAiRef = useRef(false);
 
-  const updateSettings = useCallback((partial: Partial<BotSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...partial };
-      // If base stake changes and bot is idle, sync current stake
-      if (partial.baseStake !== undefined && !isRunningRef.current) {
-        setCurrentStake(partial.baseStake);
-        setStake(partial.baseStake.toString());
+  // Volatility Breakout stats calculation
+  const volatilityStats = useMemo(() => {
+    const pts = prices;
+    const period = settings.deviationPeriod || 15;
+    const mult = settings.deviationMultiplier || 2.0;
+    const window = pts.slice(-period);
+    if (window.length < 3) {
+      return { upperBand: 0, lowerBand: 0, mean: 0, deviation: 0, devScore: 0 };
+    }
+    const mean = window.reduce((a, b) => a + b, 0) / window.length;
+    const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
+    const deviation = Math.sqrt(variance);
+    const upperBand = mean + mult * deviation;
+    const lowerBand = mean - mult * deviation;
+    const current = window[window.length - 1];
+    const devScore = deviation > 0 ? (current - mean) / deviation : 0;
+    return { upperBand, lowerBand, mean, deviation, devScore };
+  }, [prices, settings.deviationPeriod, settings.deviationMultiplier]);
+
+  // Listen for storage changes from the separate Risk Management page
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SETTINGS_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setSettings((prev) => ({ ...prev, ...parsed }));
+        } catch {}
       }
-      return next;
-    });
-  }, [setStake]);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const updateSettings = useCallback(
+    (partial: Partial<BotSettings>) => {
+      setSettings((prev) => {
+        const next = { ...prev, ...partial };
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+          }
+        } catch {}
+
+        if (partial.baseStake !== undefined && !isRunningRef.current) {
+          setCurrentStake(partial.baseStake);
+          setStake(partial.baseStake.toString());
+        }
+        return next;
+      });
+    },
+    [setStake]
+  );
 
   const clearLogs = useCallback(() => {
     setLogs([]);
@@ -198,7 +285,7 @@ export function useAutoTradingBot({
     setStake(settingsRef.current.baseStake.toString());
     setLogs([]);
     setBotStatus('idle');
-    setStatusMessage('Bot statistics have been reset.');
+    setStatusMessage('Bot statistics and session history reset.');
   }, [setStake]);
 
   const stopBot = useCallback(() => {
@@ -241,36 +328,110 @@ export function useAutoTradingBot({
     setIsRunning(true);
     isRunningRef.current = true;
     setBotStatus('analyzing');
-    setStatusMessage('Bot activated. Analyzing market signals for first entry...');
+    setStatusMessage(`Bot activated. Evaluating ${settingsRef.current.strategy.replace('_', ' ').toUpperCase()} signals...`);
     toast.success('Auto Trading Bot Started', {
-      description: `Strategy: ${settingsRef.current.strategy.replace('_', ' ').toUpperCase()} | Base Stake: $${base}`,
+      description: `Strategy: ${settingsRef.current.strategy.replace('_', ' ').toUpperCase()} | Stake: $${base}`,
     });
   }, [isAuthenticated, isConnected, onRequireAuth, setStake]);
 
+  // Server-side AI Market Analysis trigger
+  const triggerAiAnalysis = useCallback(async (): Promise<AiSignalData | null> => {
+    if (isAnalyzingAiRef.current) return aiSignal;
+    isAnalyzingAiRef.current = true;
+
+    try {
+      const res = await fetch('/api/bot/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: activeSymbol?.underlying_symbol_name || activeSymbol?.underlying_symbol || 'Market',
+          prices: pricesRef.current.slice(-30),
+          recentStats: {
+            winRate: totalRunsRef.current > 0 ? Math.round((wonRuns / totalRunsRef.current) * 100) : 0,
+            consecutiveLosses: consecutiveLossesRef.current,
+            netProfit: netProfitRef.current,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error('AI analysis failed');
+      const data = await res.json();
+      const signal: AiSignalData = {
+        recommendation: data.recommendation || 'CALL',
+        confidence: data.confidence || 75,
+        marketRegime: data.marketRegime || 'Normal Market',
+        reasoning: data.reasoning || 'Standard trend alignment.',
+        volatilityDeviation: data.volatilityDeviation || 1.0,
+        isAnalyzing: false,
+      };
+      setAiSignal(signal);
+      return signal;
+    } catch (e) {
+      console.warn('[AI Bot Analysis Network Fallback]:', e);
+      return null;
+    } finally {
+      isAnalyzingAiRef.current = false;
+    }
+  }, [activeSymbol, wonRuns]);
+
   // Determine next direction according to strategy
-  const determineNextDirection = useCallback((): Direction => {
+  const determineNextDirection = useCallback(async (): Promise<Direction> => {
     const strat = settingsRef.current.strategy;
+    const pts = pricesRef.current;
+
+    // 1. AI Gemini Model Strategy
+    if (strat === 'ai_gemini') {
+      const signal = await triggerAiAnalysis();
+      if (signal && signal.confidence >= settingsRef.current.minAiConfidence) {
+        if (signal.recommendation === 'CALL' || signal.recommendation === 'PUT') {
+          return signal.recommendation;
+        }
+      }
+      // If AI recommends HOLD or below threshold, fallback to volatility breakout
+    }
+
+    // 2. Volatility Breakout Deviation Strategy
+    if (strat === 'volatility_breakout' || strat === 'ai_gemini') {
+      const period = settingsRef.current.deviationPeriod || 15;
+      const mult = settingsRef.current.deviationMultiplier || 2.0;
+      const window = pts.slice(-period);
+      if (window.length >= 5) {
+        const mean = window.reduce((a, b) => a + b, 0) / window.length;
+        const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
+        const stdDev = Math.sqrt(variance);
+        const upperBand = mean + mult * stdDev;
+        const lowerBand = mean - mult * stdDev;
+        const current = window[window.length - 1];
+
+        if (current >= upperBand) return 'CALL'; // Breakout up
+        if (current <= lowerBand) return 'PUT'; // Breakout down
+
+        // Inside bands: check direction of latest micro momentum
+        const prev = window[window.length - 2];
+        return current >= prev ? 'CALL' : 'PUT';
+      }
+    }
+
+    // 3. Fixed Rise / Fall
     if (strat === 'fixed_rise') return 'CALL';
     if (strat === 'fixed_fall') return 'PUT';
+
+    // 4. Alternating
     if (strat === 'alternating') {
       return directionRef.current === 'CALL' ? 'PUT' : 'CALL';
     }
 
-    const pts = pricesRef.current;
+    // 5. Trend Following vs Contrarian
     if (pts.length >= 2) {
       const last = pts[pts.length - 1];
       const prev = pts[pts.length - 2];
       const isUp = last >= prev;
-      if (strat === 'trend_following') {
-        return isUp ? 'CALL' : 'PUT';
-      }
-      if (strat === 'contrarian') {
-        return isUp ? 'PUT' : 'CALL';
-      }
+      if (strat === 'trend_following') return isUp ? 'CALL' : 'PUT';
+      if (strat === 'contrarian') return isUp ? 'PUT' : 'CALL';
     }
 
     return directionRef.current || 'CALL';
-  }, []);
+  }, [triggerAiAnalysis]);
 
   // When buyResult arrives, record active contract and log
   useEffect(() => {
@@ -279,7 +440,8 @@ export function useAutoTradingBot({
     setActiveContractId(buyResult.contractId);
     activeContractIdRef.current = buyResult.contractId;
     setBotStatus('contract_running');
-    setStatusMessage(`Contract #${buyResult.contractId} running. Waiting for expiry...`);
+    setStatusMessage(`Contract #${buyResult.contractId} active. Monitoring live ticks for settlement...`);
+    playSuccessTradeSound();
 
     const newLog: BotLogEntry = {
       id: `${buyResult.contractId}-${Date.now()}`,
@@ -291,6 +453,7 @@ export function useAutoTradingBot({
       payout: buyResult.payout,
       status: 'PENDING',
       details: buyResult.longcode,
+      strategyUsed: settingsRef.current.strategy.replace('_', ' ').toUpperCase(),
     };
 
     setLogs((prev) => [newLog, ...prev.slice(0, 99)]);
@@ -302,13 +465,12 @@ export function useAutoTradingBot({
 
     toast.error('Bot Trade Error', { description: buyError });
     setBotStatus('error');
-    setStatusMessage(`Trade execution error: ${buyError}. Retrying in 4 seconds...`);
+    setStatusMessage(`Trade submission notice: ${buyError}. Retrying in 4 seconds...`);
 
-    // Cooldown before retrying
     cooldownTimerRef.current = setTimeout(() => {
       if (isRunningRef.current) {
         setBotStatus('analyzing');
-        setStatusMessage('Resuming analysis after error recovery...');
+        setStatusMessage('Resuming automated analysis...');
       }
     }, 4000);
   }, [buyError]);
@@ -330,10 +492,9 @@ export function useAutoTradingBot({
       const status = contract.status as string;
 
       if (isSold || isExpired || status !== 'open') {
-        // Contract has concluded!
+        // Contract concluded!
         const profit = parseFloat(String(contract.profit ?? '0'));
         const won = profit > 0;
-        const buyPrice = parseFloat(String(contract.buy_price ?? currentStakeRef.current));
 
         setActiveContractId(null);
         activeContractIdRef.current = null;
@@ -356,11 +517,11 @@ export function useAutoTradingBot({
           consecutiveLossesRef.current = 0;
           setConsecutiveLosses(0);
 
-          toast.success(`Bot Trade Won! +$${profit.toFixed(2)}`, {
+          toast.success(`Trade Won! +$${profit.toFixed(2)}`, {
             description: `Contract #${contractId} won.`,
           });
 
-          // Money management adjustments on WIN
+          // Money management on WIN
           if (settingsRef.current.moneyManagement === 'martingale') {
             newStake = settingsRef.current.baseStake;
           } else if (settingsRef.current.moneyManagement === 'dalembert') {
@@ -375,11 +536,11 @@ export function useAutoTradingBot({
           consecutiveLossesRef.current = newConsecutiveLosses;
           setConsecutiveLosses(newConsecutiveLosses);
 
-          toast.error(`Bot Trade Lost: -$${Math.abs(profit).toFixed(2)}`, {
+          toast.error(`Trade Lost: -$${Math.abs(profit).toFixed(2)}`, {
             description: `Contract #${contractId} lost.`,
           });
 
-          // Money management adjustments on LOSS
+          // Money management on LOSS
           if (settingsRef.current.moneyManagement === 'martingale') {
             newStake = parseFloat(
               (currentStakeRef.current * settingsRef.current.martingaleMultiplier).toFixed(2)
@@ -395,7 +556,7 @@ export function useAutoTradingBot({
         currentStakeRef.current = newStake;
         setStake(newStake.toString());
 
-        // Update log entry
+        // Update log
         setLogs((prev) =>
           prev.map((log) => {
             if (log.contractId === contractId) {
@@ -416,9 +577,10 @@ export function useAutoTradingBot({
           setIsRunning(false);
           isRunningRef.current = false;
           setBotStatus('stopped_take_profit');
-          setStatusMessage(`🎉 Target Take Profit reached: +$${updatedNetProfit.toFixed(2)}! Bot has stopped.`);
-          toast.success('Take Profit Reached!', {
-            description: `Session target of +$${takeProfit} achieved. Total: +$${updatedNetProfit.toFixed(2)}`,
+          setStatusMessage(`🎯 Target Take Profit reached (+$${updatedNetProfit.toFixed(2)})! Bot halted safely.`);
+          playProfitLimitSound();
+          toast.success('Take Profit Target Reached!', {
+            description: `Session goal of +$${takeProfit} reached. Total: +$${updatedNetProfit.toFixed(2)}`,
           });
           return;
         }
@@ -427,9 +589,10 @@ export function useAutoTradingBot({
           setIsRunning(false);
           isRunningRef.current = false;
           setBotStatus('stopped_stop_loss');
-          setStatusMessage(`⚠️ Stop Loss limit reached: -$${Math.abs(updatedNetProfit).toFixed(2)}. Bot has stopped to protect capital.`);
+          setStatusMessage(`⚠️ Stop Loss threshold hit (-$${Math.abs(updatedNetProfit).toFixed(2)}). Bot halted.`);
+          playLossLimitSound();
           toast.error('Stop Loss Hit', {
-            description: `Loss limit of -$${stopLoss} reached. Bot halted.`,
+            description: `Loss limit of -$${stopLoss} reached. Capital preserved.`,
           });
           return;
         }
@@ -438,9 +601,10 @@ export function useAutoTradingBot({
           setIsRunning(false);
           isRunningRef.current = false;
           setBotStatus('stopped_max_losses');
-          setStatusMessage(`⚠️ Max consecutive losses limit (${maxConsecutiveLosses}) reached. Bot has stopped.`);
-          toast.error('Consecutive Losses Limit', {
-            description: `Safety threshold reached (${maxConsecutiveLosses} losses in a row). Bot halted.`,
+          setStatusMessage(`⚠️ Max consecutive losses limit (${maxConsecutiveLosses}) reached. Safety shutdown.`);
+          playLossLimitSound();
+          toast.error('Consecutive Losses Safety', {
+            description: `Hit ${maxConsecutiveLosses} losses in a row. Bot stopped.`,
           });
           return;
         }
@@ -449,24 +613,23 @@ export function useAutoTradingBot({
           setIsRunning(false);
           isRunningRef.current = false;
           setBotStatus('stopped_max_runs');
-          setStatusMessage(`🏁 Max scheduled runs reached (${maxRuns} trades). Bot has completed session.`);
+          setStatusMessage(`🏁 Session completed: ${maxRuns} total runs executed.`);
           toast.info('Session Finished', {
-            description: `Completed ${maxRuns} automated trades. Net P/L: $${updatedNetProfit.toFixed(2)}`,
+            description: `Completed ${maxRuns} trades. Net P/L: $${updatedNetProfit.toFixed(2)}`,
           });
           return;
         }
 
-        // If user requested stop during trade:
         if (!isRunningRef.current) {
           setBotStatus('stopped');
           setStatusMessage('Bot stopped after settling active contract.');
           return;
         }
 
-        // If still active, enter cooldown before next trade
+        // Cooldown before next trade
         const cooldown = Math.max(1, settingsRef.current.cooldownSeconds);
         setBotStatus('cooldown');
-        setStatusMessage(`Trade finished (${won ? 'WON' : 'LOST'}). Next trade in ${cooldown}s with stake $${newStake}...`);
+        setStatusMessage(`Settled (${won ? 'WON' : 'LOST'}). Next trade in ${cooldown}s (Stake: $${newStake})...`);
 
         cooldownTimerRef.current = setTimeout(() => {
           if (isRunningRef.current) {
@@ -489,47 +652,51 @@ export function useAutoTradingBot({
     if (isBuying) return;
     if (botStatus !== 'analyzing') return;
 
-    // Pick next direction
-    const nextDir = determineNextDirection();
-    if (directionRef.current !== nextDir) {
-      setDirection(nextDir);
-      directionRef.current = nextDir;
-    }
+    let cancelled = false;
 
-    // Ensure stake string matches currentStake
-    const expectedStake = currentStakeRef.current.toString();
-    if (stake !== expectedStake) {
-      setStake(expectedStake);
-    }
+    const executeNextTrade = async () => {
+      const nextDir = await determineNextDirection();
+      if (cancelled || !isRunningRef.current) return;
 
-    // Check if proposal matches
-    const expectedContractType = allowEquals ? `${nextDir}E` : nextDir;
-    const p = proposalRef.current;
+      if (directionRef.current !== nextDir) {
+        setDirection(nextDir);
+        directionRef.current = nextDir;
+      }
 
-    if (!p) {
-      setBotStatus('waiting_proposal');
-      setStatusMessage(`Waiting for quote on ${nextDir} ($${currentStakeRef.current})...`);
-      return;
-    }
+      const expectedStake = currentStakeRef.current.toString();
+      if (stake !== expectedStake) {
+        setStake(expectedStake);
+      }
 
-    // Verify proposal matches target stake
-    const isMatchingStake = Math.abs(p.askPrice - currentStakeRef.current) < 0.1;
+      const p = proposalRef.current;
+      if (!p) {
+        setBotStatus('waiting_proposal');
+        setStatusMessage(`Waiting for quote on ${nextDir} ($${currentStakeRef.current})...`);
+        return;
+      }
 
-    if (!isMatchingStake) {
-      setBotStatus('waiting_proposal');
-      setStatusMessage(`Syncing contract proposal for ${nextDir} ($${currentStakeRef.current})...`);
-      return;
-    }
+      const isMatchingStake = Math.abs(p.askPrice - currentStakeRef.current) < 0.1;
+      if (!isMatchingStake) {
+        setBotStatus('waiting_proposal');
+        setStatusMessage(`Syncing contract proposal for ${nextDir} ($${currentStakeRef.current})...`);
+        return;
+      }
 
-    // Ready to execute trade!
-    setBotStatus('buying');
-    setStatusMessage(`Placing automated ${nextDir} trade (Stake: $${currentStakeRef.current}, Payout: $${p.payout.toFixed(2)})...`);
+      setBotStatus('buying');
+      setStatusMessage(`Placing automated ${nextDir} trade (Stake: $${currentStakeRef.current}, Payout: $${p.payout.toFixed(2)})...`);
 
-    buyContract().catch((err) => {
-      console.error('[useAutoTradingBot] buy error:', err);
-      setBotStatus('error');
-      setStatusMessage('Order submission failed. Retrying shortly...');
-    });
+      buyContract().catch((err) => {
+        console.error('[useAutoTradingBot] buy error:', err);
+        setBotStatus('error');
+        setStatusMessage('Order submission failed. Retrying shortly...');
+      });
+    };
+
+    executeNextTrade();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     isRunning,
     botStatus,
@@ -544,7 +711,6 @@ export function useAutoTradingBot({
     buyContract,
   ]);
 
-  // Clean up timers on unmount
   useEffect(() => {
     return () => {
       if (cooldownTimerRef.current) {
@@ -570,9 +736,12 @@ export function useAutoTradingBot({
     netProfit,
     logs,
     activeContractId,
+    aiSignal,
+    volatilityStats,
     startBot,
     stopBot,
     resetStats,
     clearLogs,
+    triggerAiAnalysis,
   };
 }

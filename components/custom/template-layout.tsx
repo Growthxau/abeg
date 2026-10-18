@@ -31,7 +31,7 @@ export function TemplateLayout({ children }: { children: React.ReactNode }) {
       <DerivWSProvider>
         <ViewportScaler>{children}</ViewportScaler>
       </DerivWSProvider>
-      <Toaster />
+      <Toaster position="top-right" />
       <EnvCheck />
     </Providers>
   );

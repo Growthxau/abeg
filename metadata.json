@@ -1,4 +1,7 @@
 {
   "name": "Deriv Rise/Fall Trading App",
-  "description": "A white-label trading application powered by Deriv."
+  "description": "A white-label trading application powered by Deriv.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

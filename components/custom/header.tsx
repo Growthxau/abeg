@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { FocusScope } from '@radix-ui/react-focus-scope';
 import { LogOut, Menu, X } from 'lucide-react';
@@ -315,6 +316,28 @@ export function Header({
           </h1>
         )}
       </div>
+      <nav className="hidden md:flex items-center gap-1">
+        <Link
+          href="/"
+          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          Bot Dashboard
+        </Link>
+        <Link
+          href="/risk-management"
+          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1"
+        >
+          <span>🛡️ Risk Management</span>
+        </Link>
+        {isAuthenticated && (
+          <Link
+            href="/reports"
+            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          >
+            Positions
+          </Link>
+        )}
+      </nav>
       <div className="flex min-w-0 items-center gap-3">
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           {actions}
@@ -411,6 +434,34 @@ export function Header({
         onFocusOutside={preventDismissFromPopoverOrHeader}
       >
         <div className="flex-1 overflow-y-auto px-6 pt-4 space-y-6">
+          <div className="space-y-2 border-b border-border pb-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Navigation</p>
+            <div className="flex flex-col gap-1">
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted"
+              >
+                🤖 Bot Dashboard
+              </Link>
+              <Link
+                href="/risk-management"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted"
+              >
+                🛡️ Risk Management
+              </Link>
+              {isAuthenticated && (
+                <Link
+                  href="/reports"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2 px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted"
+                >
+                  📊 Positions & History
+                </Link>
+              )}
+            </div>
+          </div>
           <div className="space-y-2 text-left">
             <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-tight">
               <Localize i18n_default_text="Your preferences" />
