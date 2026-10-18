@@ -242,43 +242,35 @@ export function useAuth(): UseAuthReturn {
       if (storedAuth) {
         // Check if token is expired
         if (storedAuth.expires_at && Date.now() / 1000 > storedAuth.expires_at) {
-          let refreshed: AuthInfo;
+          let refreshed: AuthInfo | null = null;
           try {
             refreshed = await refreshAccessToken(
               storedAuth.refresh_token,
               getAuthConfig().clientId
             );
           } catch {
-            // Refresh failed (token revoked/expired) — fall back to
-            // unauthenticated (public WS)
-            clearAllAuthData();
-            setAuthState('unauthenticated');
-            return;
+            // Offline or refresh failed — preserve session using cached snapshot
+            if (await restoreCachedSession(storedAuth)) {
+              return;
+            }
           }
           try {
-            await completeAuth(refreshed, getActiveLoginId());
+            await completeAuth(refreshed ?? storedAuth, getActiveLoginId());
           } catch {
-            // Same resilience as the valid-session path: a transient fetch
-            // failure after a successful refresh keeps the session alive on
-            // the cached snapshot instead of forcing a logout.
-            if (!(await restoreCachedSession(refreshed))) {
-              clearAllAuthData();
-              setAuthState('unauthenticated');
+            if (!(await restoreCachedSession(refreshed ?? storedAuth))) {
+              // Keep session active on cached snapshot instead of logging out
+              setAuthState('authenticated');
             }
           }
           return;
         }
 
-        // Always refresh the account snapshot. The cached account list is only
-        // an initial render fallback and may contain a stale balance.
+        // Always refresh the account snapshot if online, fallback to cache if offline
         try {
           await completeAuth(storedAuth, getActiveLoginId());
         } catch {
-          // Fresh fetch failed (e.g. transient network error) — keep the
-          // session alive on the cached snapshot rather than logging out.
           if (!(await restoreCachedSession(storedAuth))) {
-            clearAllAuthData();
-            setAuthState('unauthenticated');
+            setAuthState('authenticated');
           }
         }
       }

@@ -7,6 +7,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { LANGUAGE_LOCALES } from '@/lib/i18n';
 import { useAppTranslations } from '@/components/custom/i18n-provider';
+import { AppLogo } from '@/components/custom/app-logo';
 import type { AuthState, DerivAccount } from '@deriv/core';
 
 interface HeaderProps {
@@ -79,9 +80,7 @@ export function Header({
     <header className="sticky top-0 z-50 flex items-center justify-between px-3 py-1.5 border-b bg-background/95 backdrop-blur-sm">
       <div className="flex items-center gap-2 shrink-0">
         {!logoSrc || logoError ? (
-          <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {logoLetter}
-          </div>
+          <AppLogo className="w-7 h-7" />
         ) : (
           <img
             src={logoSrc}
