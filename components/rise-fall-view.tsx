@@ -408,7 +408,7 @@ export function RiseFallView({
         </div>
 
         {/* Scrollable Content Area in Between */}
-        <div className="absolute top-[57px] bottom-[68px] left-0 right-0 overflow-y-auto p-3 space-y-3 pb-[12px]">
+        <div className="absolute top-[56px] bottom-[56px] left-0 right-0 overflow-y-auto p-3 space-y-3 pb-[12px]">
           {isLoading ? (
             <Skeleton className="h-48 w-full rounded-xl" />
           ) : bot ? (
