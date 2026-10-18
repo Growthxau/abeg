@@ -61,12 +61,12 @@ export function evaluateTrendAndPullbackStrategy(
   prices: number[],
   lastEvaluatedCandleIndexRef: { current: number }
 ): { decision: 'CALL' | 'PUT' | 'HOLD'; reason: string; candleIndex: number } {
-  if (prices.length < 35) {
+  if (prices.length < 10) {
     return { decision: 'HOLD', reason: 'Waiting for sufficient price history', candleIndex: -1 };
   }
 
-  // Convert raw ticks into completed candles (grouping every 5 ticks into 1 candle)
-  const ticksPerCandle = 5;
+  // Convert raw ticks into completed candles (grouping every 3 ticks into 1 candle)
+  const ticksPerCandle = 3;
   const candles: Candle[] = [];
   for (let i = 0; i < prices.length - ticksPerCandle; i += ticksPerCandle) {
     const chunk = prices.slice(i, i + ticksPerCandle);
@@ -77,8 +77,10 @@ export function evaluateTrendAndPullbackStrategy(
     candles.push({ open, high, low, close });
   }
 
-  if (candles.length < 25) {
-    return { decision: 'HOLD', reason: 'Building completed candles...', candleIndex: -1 };
+  if (candles.length < 5) {
+    // If not enough candles yet, use recent tick momentum
+    const recentDir = prices[prices.length - 1] >= prices[prices.length - 3] ? 'CALL' : 'PUT';
+    return { decision: recentDir, reason: 'Initial tick momentum signal', candleIndex: -1 };
   }
 
   const currentCandleIndex = candles.length - 1;
@@ -88,56 +90,23 @@ export function evaluateTrendAndPullbackStrategy(
   }
 
   const closes = candles.map(c => c.close);
-  const ema9 = computeEMA(closes, 9);
-  const ema21 = computeEMA(closes, 21);
-  const rsi = computeRSI(closes, 14);
+  const ema9 = computeEMA(closes, 5);
+  const ema21 = computeEMA(closes, 10);
+  const rsi = computeRSI(closes, 7);
 
   const idx = closes.length - 1;
   const e9 = ema9[idx];
   const e21 = ema21[idx];
-  const prevE9 = ema9[idx - 1];
-  const prevE21 = ema21[idx - 1];
   const currentRsi = rsi[idx];
   const currentClose = closes[idx];
-  const prevClose = closes[idx - 1];
+  const prevClose = closes[idx - 1] ?? currentClose;
 
-  // Volatility calculation (standard deviation of recent candle closes)
-  const recentCloses = closes.slice(-10);
-  const meanClose = recentCloses.reduce((a, b) => a + b, 0) / recentCloses.length;
-  const variance = recentCloses.reduce((acc, c) => acc + Math.pow(c - meanClose, 2), 0) / recentCloses.length;
-  const volatility = Math.sqrt(variance) || 0.001;
+  // Entry logic: if EMA9 >= EMA21 or price rising, CALL, else PUT
+  lastEvaluatedCandleIndexRef.current = currentCandleIndex;
 
-  const emaDiff = Math.abs(e9 - e21);
-  const minRequiredSeparation = 0.15 * volatility; // Strict sideways filter threshold
-
-  // Rule 4: Strict sideways-market filter
-  const isCrossing = (prevE9 <= prevE21 && e9 > e21) || (prevE9 >= prevE21 && e9 < e21);
-  if (emaDiff < minRequiredSeparation || isCrossing) {
-    return { decision: 'HOLD', reason: 'Sideways / choppy market filtered out', candleIndex: currentCandleIndex };
+  if (e9 >= e21 || currentClose >= prevClose) {
+    return { decision: 'CALL', reason: `Bullish Trend Signal (EMA9: ${e9.toFixed(2)}, RSI: ${currentRsi.toFixed(1)})`, candleIndex: currentCandleIndex };
+  } else {
+    return { decision: 'PUT', reason: `Bearish Trend Signal (EMA9: ${e9.toFixed(2)}, RSI: ${currentRsi.toFixed(1)})`, candleIndex: currentCandleIndex };
   }
-
-  // Rule 1: Trend detection via EMA 9 and EMA 21
-  const isBullishTrend = e9 > e21 && e9 > prevE9;
-  const isBearishTrend = e9 < e21 && e9 < prevE9;
-
-  // Rule 2: Pullback confirmation
-  const isBullishPullbackRecovery = prevClose <= prevE9 && currentClose > prevClose;
-  const isBearishPullbackRecovery = prevClose >= prevE9 && currentClose < prevClose;
-
-  // Rule 3: RSI confirmation
-  const isRsiBullish = currentRsi > 50 && currentRsi < 80;
-  const isRsiBearish = currentRsi < 50 && currentRsi > 20;
-
-  // Rule 5: Entry rules
-  if (isBullishTrend && isBullishPullbackRecovery && isRsiBullish) {
-    lastEvaluatedCandleIndexRef.current = currentCandleIndex;
-    return { decision: 'CALL', reason: `Bullish Trend & Pullback confirmed (RSI: ${currentRsi.toFixed(1)})`, candleIndex: currentCandleIndex };
-  }
-
-  if (isBearishTrend && isBearishPullbackRecovery && isRsiBearish) {
-    lastEvaluatedCandleIndexRef.current = currentCandleIndex;
-    return { decision: 'PUT', reason: `Bearish Trend & Pullback confirmed (RSI: ${currentRsi.toFixed(1)})`, candleIndex: currentCandleIndex };
-  }
-
-  return { decision: 'HOLD', reason: 'Waiting for valid trend + pullback setup', candleIndex: currentCandleIndex };
 }
