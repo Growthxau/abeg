@@ -36,7 +36,7 @@ function AccountLabel({ type }: { type: 'demo' | 'real' }) {
     <span
       className={cn(
         'text-[10px] font-medium whitespace-nowrap truncate',
-        type === 'demo' ? 'text-orange-500' : 'text-emerald-600'
+        type === 'demo' ? 'text-orange-500' : 'text-[#722F37]'
       )}
     >
       {type === 'demo' ? 'Demo' : 'Real'}
@@ -165,7 +165,7 @@ export function Header({
                 size="sm"
                 onClick={onSignUp}
                 disabled={isAuthenticating}
-                className="h-7 px-2.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-7 px-2.5 text-xs font-semibold bg-[#722F37] hover:bg-[#5C242C] text-white"
               >
                 Sign up
               </Button>

@@ -31,9 +31,9 @@
     --chart-3: 22 78 99;
     --chart-4: 251 191 36;
     --chart-5: 245 158 11;
-    --buy-background: 0 195 144;
+    --buy-background: 114 47 55;
     --buy-foreground: 255 255 255;
-    --sell-background: 222 0 64;
+    --sell-background: 139 69 77;
     --sell-foreground: 255 255 255;
     --button-black: 0 0 0;
     --button-black-foreground: 255 255 255;
@@ -56,8 +56,8 @@
     --destructive-40: 220 38 38 / 0.4000000059604645;
     --outline-10: 163 163 163 / 0.10000000149011612;
     --blue-500: 59 130 246;
-    --buy-20: 0 195 144 / 0.20000000298023224;
-    --sell-20: 222 0 64 / 0.20000000298023224;
+    --buy-20: 114 47 55 / 0.2;
+    --sell-20: 139 69 77 / 0.2;
     --section-message: 147 197 253 / 0.1599999964237213;
     --border-focus: 0 0 0;
     --border-focus-destructive: 196 0 0;
