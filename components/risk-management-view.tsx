@@ -91,12 +91,14 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
 
   return (
     <div className="w-full space-y-4 pb-20">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-          <ShieldAlert className="w-4 h-4 text-emerald-600" />
+      <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-4 shadow-md space-y-4 text-zinc-100">
+        <div className="flex items-center gap-2.5 border-b border-zinc-800 pb-3">
+          <div className="p-2 rounded-xl bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
+            <ShieldAlert className="w-4 h-4" />
+          </div>
           <div>
-            <h3 className="font-bold text-slate-900 text-sm">Risk Management & Stake Setup</h3>
-            <p className="text-xs text-slate-500">Configure permitted risk limits and stake size for G-Squad</p>
+            <h3 className="font-bold text-zinc-100 text-sm">Risk Management & Stake Setup</h3>
+            <p className="text-xs text-zinc-400">Configure permitted risk limits and stake size for G-Squad</p>
           </div>
         </div>
 
@@ -104,10 +106,10 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
           {/* Base Stake */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
+              <Label className="text-xs font-medium text-zinc-300">
                 Stake Amount (USD)
               </Label>
-              <span className="text-[11px] text-slate-500 font-mono">
+              <span className="text-[11px] text-zinc-400 font-mono">
                 Min: $0.35
               </span>
             </div>
@@ -119,7 +121,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepStake(-1)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Minus className="w-3.5 h-3.5" />
               </Button>
@@ -133,7 +135,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleBaseStakeBlur();
                 }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center font-bold"
+                className="h-10 bg-zinc-900 border-zinc-700 text-sm font-mono text-center font-bold text-yellow-400"
                 placeholder="10"
               />
               <Button
@@ -142,13 +144,13 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepStake(1)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
               </Button>
             </div>
             {/* Quick Stake Chips */}
-            <div className="flex items-center gap-1 pt-1 flex-wrap">
+            <div className="flex items-center gap-1.5 pt-1 flex-wrap">
               {[1, 5, 10, 25, 50, 100].map((amt) => (
                 <button
                   key={amt}
@@ -156,10 +158,10 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                   disabled={isRunning}
                   onClick={() => commitBaseStake(amt)}
                   className={cn(
-                    'px-2.5 py-1 rounded text-xs font-mono font-medium transition-colors cursor-pointer border',
+                    'px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer border',
                     Math.abs(parseFloat(baseStakeInput) - amt) < 0.01
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-yellow-400 text-zinc-950 border-yellow-400 font-bold shadow'
+                      : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
                   )}
                 >
                   ${amt}
@@ -171,10 +173,10 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
           {/* Daily Profit Target */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
+              <Label className="text-xs font-medium text-zinc-300">
                 Daily Profit Target (USD)
               </Label>
-              <span className="text-[11px] text-emerald-600 font-medium">
+              <span className="text-[11px] text-emerald-400 font-medium">
                 Auto-stop on goal
               </span>
             </div>
@@ -186,7 +188,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepTakeProfit(-5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Minus className="w-3.5 h-3.5" />
               </Button>
@@ -200,7 +202,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleTakeProfitBlur();
                 }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center font-bold text-emerald-700"
+                className="h-10 bg-zinc-900 border-zinc-700 text-sm font-mono text-center font-bold text-emerald-400"
                 placeholder="50"
               />
               <Button
@@ -209,7 +211,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepTakeProfit(5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
               </Button>
@@ -219,10 +221,10 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
           {/* Maximum Daily Loss */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-slate-700">
+              <Label className="text-xs font-medium text-zinc-300">
                 Maximum Daily Loss (USD)
               </Label>
-              <span className="text-[11px] text-rose-600 font-medium">
+              <span className="text-[11px] text-rose-400 font-medium">
                 Auto-stop to preserve capital
               </span>
             </div>
@@ -234,7 +236,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepStopLoss(-5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Minus className="w-3.5 h-3.5" />
               </Button>
@@ -248,7 +250,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleStopLossBlur();
                 }}
-                className="h-10 bg-slate-50 border-slate-200 text-sm font-mono text-center font-bold text-rose-700"
+                className="h-10 bg-zinc-900 border-zinc-700 text-sm font-mono text-center font-bold text-rose-400"
                 placeholder="50"
               />
               <Button
@@ -257,7 +259,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
                 size="icon"
                 disabled={isRunning}
                 onClick={() => stepStopLoss(5)}
-                className="h-10 w-10 shrink-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                className="h-10 w-10 shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
               </Button>
@@ -266,7 +268,7 @@ export function RiskManagementView({ bot }: RiskManagementViewProps) {
         </div>
 
         {isRunning && (
-          <p className="text-[11px] text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+          <p className="text-[11px] text-amber-400 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30">
             Risk settings are locked while G-Squad bot is running. Stop the bot to edit limits.
           </p>
         )}
