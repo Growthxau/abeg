@@ -29,6 +29,5 @@ export default function RiseFallPage() {
     };
   }, []);
 
-  if (config === undefined) return <div className="min-h-dvh bg-background" />;
   return <LiveRiseFall appConfig={config ?? undefined} />;
 }

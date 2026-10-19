@@ -33,6 +33,10 @@ export function generateMetadata(): Metadata {
     title,
     description,
     metadataBase: new URL(siteUrl),
+    other: {
+      'theme-color': '#000000',
+      'apple-mobile-web-app-status-bar-style': 'black',
+    },
     alternates: {
       canonical: '/',
     },

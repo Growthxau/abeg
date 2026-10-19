@@ -409,9 +409,7 @@ export function RiseFallView({
 
         {/* Scrollable Content Area in Between */}
         <div className="absolute top-[74px] bottom-[56px] left-0 right-0 overflow-y-auto px-0 pb-0 space-y-3">
-          {isLoading ? (
-            <Skeleton className="h-48 w-full rounded-xl" />
-          ) : bot ? (
+          {bot ? (
             activeTab === 'dashboard' ? (
               <BotControls
                 bot={bot}
