@@ -105,7 +105,7 @@ export default function RiskManagementPage() {
     let p: Partial<BotSettings> = {};
     if (preset === 'conservative') {
       p = {
-        strategy: 'volatility_momentum',
+        strategy: 'volatility_breakout',
         moneyManagement: 'fixed',
         baseStake: 5,
         martingaleMultiplier: 1.5,
@@ -120,7 +120,7 @@ export default function RiskManagementPage() {
       };
     } else if (preset === 'balanced') {
       p = {
-        strategy: 'volatility_momentum',
+        strategy: 'volatility_breakout',
         moneyManagement: 'martingale',
         baseStake: 10,
         martingaleMultiplier: 2.0,
@@ -135,7 +135,7 @@ export default function RiskManagementPage() {
       };
     } else {
       p = {
-        strategy: 'volatility_momentum',
+        strategy: 'volatility_breakout',
         moneyManagement: 'martingale',
         baseStake: 20,
         martingaleMultiplier: 2.2,

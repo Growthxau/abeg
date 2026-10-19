@@ -5,9 +5,9 @@ import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
 import type { Direction } from '../lib/types';
 import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
-import { evaluateVolatilityMomentumStrategy } from '@/lib/strategy';
+import { evaluateVolatilityBreakoutDeviationStrategy } from '@/lib/strategy';
 
-export type BotStrategy = 'volatility_momentum';
+export type BotStrategy = 'volatility_breakout';
 
 export type MoneyManagement = 'martingale' | 'fixed' | 'dalembert';
 
@@ -68,7 +68,7 @@ export interface AiSignalData {
 export const SETTINGS_STORAGE_KEY = 'deriv_bot_risk_settings_v2';
 
 export const DEFAULT_BOT_SETTINGS: BotSettings = {
-  strategy: 'volatility_momentum',
+  strategy: 'volatility_breakout',
   moneyManagement: 'martingale',
   baseStake: 10,
   martingaleMultiplier: 2.0,
@@ -530,18 +530,18 @@ export function useAutoTradingBot({
 
   const lastEvaluatedTickIndexRef = useRef(-1);
 
-  // Determine next direction combining volatility breakout deviation, momentum volatility, and tick analysis
+  // Determine next direction using Volatility Breakout Deviation strategy
   const determineNextDirection = useCallback(async (): Promise<Direction | 'HOLD'> => {
     const pts = pricesRef.current;
     const settings = settingsRef.current;
-    const res = evaluateVolatilityMomentumStrategy(
+    const res = evaluateVolatilityBreakoutDeviationStrategy(
       pts,
       lastEvaluatedTickIndexRef,
       settings.deviationMultiplier,
       settings.deviationPeriod
     );
     if (res.reason) {
-      setStatusMessage(`[Signal Engine]: ${res.reason}`);
+      setStatusMessage(`[Breakout Engine]: ${res.reason}`);
     }
     return res.decision;
   }, []);

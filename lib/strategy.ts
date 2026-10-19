@@ -1,24 +1,10 @@
-export function computeEMA(data: number[], period: number): number[] {
-  const k = 2 / (period + 1);
-  const emaArray: number[] = [];
-  if (data.length === 0) return emaArray;
-  let prevEma = data[0];
-  emaArray.push(prevEma);
-  for (let i = 1; i < data.length; i++) {
-    const currentEma = (data[i] - prevEma) * k + prevEma;
-    emaArray.push(currentEma);
-    prevEma = currentEma;
-  }
-  return emaArray;
-}
-
-export function evaluateVolatilityMomentumStrategy(
+export function evaluateVolatilityBreakoutDeviationStrategy(
   prices: number[],
   lastEvaluatedTickIndexRef: { current: number },
-  deviationMultiplier = 1.0,
-  deviationPeriod = 10
+  deviationMultiplier = 1.5,
+  deviationPeriod = 15
 ): { decision: 'CALL' | 'PUT' | 'HOLD'; reason: string; tickIndex: number } {
-  if (prices.length < 5) {
+  if (prices.length < Math.max(5, deviationPeriod)) {
     return { decision: 'HOLD', reason: 'Waiting for tick history...', tickIndex: -1 };
   }
 
@@ -27,24 +13,42 @@ export function evaluateVolatilityMomentumStrategy(
     return { decision: 'HOLD', reason: 'Tick already evaluated', tickIndex: currentTickIndex };
   }
 
+  const window = prices.slice(-deviationPeriod);
   const currentPrice = prices[prices.length - 1];
   const prevPrice = prices[prices.length - 2];
+
+  const mean = window.reduce((a, b) => a + b, 0) / window.length;
+  const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
+  const deviation = Math.sqrt(variance);
+
+  const upperBand = mean + deviationMultiplier * deviation;
+  const lowerBand = mean - deviationMultiplier * deviation;
+
+  const zScore = deviation > 0 ? (currentPrice - mean) / deviation : 0;
   const momentum = currentPrice - prevPrice;
 
   lastEvaluatedTickIndexRef.current = currentTickIndex;
 
-  // Active signal evaluation ensuring the bot trades reliably when running
-  if (momentum >= 0) {
+  // Volatility Breakout Deviation Strategy
+  if (currentPrice >= upperBand || (zScore >= 0.8 && momentum >= 0)) {
     return {
       decision: 'CALL',
-      reason: `Bullish momentum detected (${currentPrice.toFixed(2)} >= ${prevPrice.toFixed(2)})`,
-      tickIndex: currentTickIndex,
-    };
-  } else {
-    return {
-      decision: 'PUT',
-      reason: `Bearish momentum detected (${currentPrice.toFixed(2)} < ${prevPrice.toFixed(2)})`,
+      reason: `Bullish volatility deviation breakout (Z-Score: +${zScore.toFixed(2)}σ)`,
       tickIndex: currentTickIndex,
     };
   }
+
+  if (currentPrice <= lowerBand || (zScore <= -0.8 && momentum <= 0)) {
+    return {
+      decision: 'PUT',
+      reason: `Bearish volatility deviation breakout (Z-Score: ${zScore.toFixed(2)}σ)`,
+      tickIndex: currentTickIndex,
+    };
+  }
+
+  return {
+    decision: 'HOLD',
+    reason: `Consolidating within deviation envelope (Z-Score: ${zScore.toFixed(2)}σ)`,
+    tickIndex: currentTickIndex,
+  };
 }

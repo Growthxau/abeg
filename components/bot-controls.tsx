@@ -146,7 +146,7 @@ export function BotControls({
                 <span>Volatility 100 Index</span>
               </h3>
               <p className="text-xs text-zinc-400">
-                MACD (5, 13, 4) + EMA 20 • 5 Ticks
+                Volatility Breakout Deviation • 5 Ticks
               </p>
             </div>
           </div>
