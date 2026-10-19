@@ -489,6 +489,12 @@ export function useAutoTradingBot({
     setCurrentStake(base);
     currentStakeRef.current = base;
     setStake(base.toString());
+    setTotalRuns(0);
+    totalRunsRef.current = 0;
+    setWonRuns(0);
+    setLostRuns(0);
+    setNetProfit(0);
+    netProfitRef.current = 0;
     setConsecutiveLosses(0);
     consecutiveLossesRef.current = 0;
 
