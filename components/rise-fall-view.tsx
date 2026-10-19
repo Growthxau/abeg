@@ -417,6 +417,7 @@ export function RiseFallView({
                 bot={bot}
                 isConnected={isConnected}
                 activeSymbol={activeSymbol}
+                activeAccount={activeAccount}
                 direction={direction}
                 onDirectionChange={setDirection}
                 allowEquals={allowEquals}
@@ -440,14 +441,14 @@ export function RiseFallView({
           ) : null}
         </div>
 
-        {/* Absolutely Pinned Bottom Navbar - Never Moves */}
-        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 h-14 px-6 flex items-center justify-around shadow-lg">
+        {/* Absolutely Pinned Bottom Navbar - Dark Theme */}
+        <div className="absolute bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur border-t border-zinc-800 h-14 px-6 flex items-center justify-around shadow-lg">
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
             className={cn(
               'flex flex-col items-center gap-1 transition-colors cursor-pointer',
-              activeTab === 'dashboard' ? 'text-red-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+              activeTab === 'dashboard' ? 'text-yellow-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -458,7 +459,7 @@ export function RiseFallView({
             onClick={() => setActiveTab('risk')}
             className={cn(
               'flex flex-col items-center gap-1 transition-colors cursor-pointer',
-              activeTab === 'risk' ? 'text-red-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+              activeTab === 'risk' ? 'text-yellow-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'
             )}
           >
             <ShieldAlert className="w-5 h-5" />

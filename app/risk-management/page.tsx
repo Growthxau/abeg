@@ -185,7 +185,7 @@ export default function RiskManagementPage() {
   });
 
   return (
-    <main className="flex flex-col bg-slate-50 min-h-dvh text-slate-900">
+    <main className="flex flex-col bg-[#121212] min-h-dvh text-zinc-100">
       <Header
         authState={authState}
         accounts={accounts}
@@ -203,19 +203,19 @@ export default function RiskManagementPage() {
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Trading Bot</span>
           </Link>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-xs text-zinc-500 font-mono">
               Status: Live Sync Enabled
             </span>
             <Button
               size="sm"
               onClick={handleSave}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 cursor-pointer"
+              className="bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-bold text-xs px-4 cursor-pointer shadow-md"
             >
               Save Changes
             </Button>
@@ -223,7 +223,7 @@ export default function RiskManagementPage() {
         </div>
 
         {/* Page Banner */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-6 shadow-md text-zinc-100">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
               <ShieldAlert className="w-6 h-6" />
