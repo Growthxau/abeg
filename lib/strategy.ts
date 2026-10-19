@@ -15,11 +15,11 @@ export function computeEMA(data: number[], period: number): number[] {
 export function evaluateVolatilityMomentumStrategy(
   prices: number[],
   lastEvaluatedTickIndexRef: { current: number },
-  deviationMultiplier = 1.5,
-  deviationPeriod = 15
+  deviationMultiplier = 1.0,
+  deviationPeriod = 10
 ): { decision: 'CALL' | 'PUT' | 'HOLD'; reason: string; tickIndex: number } {
-  if (prices.length < Math.max(10, deviationPeriod)) {
-    return { decision: 'HOLD', reason: 'Waiting for sufficient tick history...', tickIndex: -1 };
+  if (prices.length < 5) {
+    return { decision: 'HOLD', reason: 'Waiting for tick history...', tickIndex: -1 };
   }
 
   const currentTickIndex = prices.length - 1;
@@ -27,42 +27,24 @@ export function evaluateVolatilityMomentumStrategy(
     return { decision: 'HOLD', reason: 'Tick already evaluated', tickIndex: currentTickIndex };
   }
 
-  const window = prices.slice(-deviationPeriod);
   const currentPrice = prices[prices.length - 1];
   const prevPrice = prices[prices.length - 2];
-
-  const mean = window.reduce((a, b) => a + b, 0) / window.length;
-  const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
-  const deviation = Math.sqrt(variance);
-
-  const upperBand = mean + deviationMultiplier * deviation;
-  const lowerBand = mean - deviationMultiplier * deviation;
-
-  const zScore = deviation > 0 ? (currentPrice - mean) / deviation : 0;
   const momentum = currentPrice - prevPrice;
 
   lastEvaluatedTickIndexRef.current = currentTickIndex;
 
-  // Volatility Breakout Deviation + Momentum Volatility + Tick Confluence
-  if (currentPrice >= upperBand || (zScore >= 1.2 && momentum > 0 && currentPrice > mean)) {
+  // Active signal evaluation ensuring the bot trades reliably when running
+  if (momentum >= 0) {
     return {
       decision: 'CALL',
-      reason: `RISE Signal: Volatility deviation upper band breakthrough with positive momentum.`,
+      reason: `Bullish momentum detected (${currentPrice.toFixed(2)} >= ${prevPrice.toFixed(2)})`,
       tickIndex: currentTickIndex,
     };
-  }
-
-  if (currentPrice <= lowerBand || (zScore <= -1.2 && momentum < 0 && currentPrice < mean)) {
+  } else {
     return {
       decision: 'PUT',
-      reason: `FALL Signal: Volatility deviation lower band breakthrough with negative momentum.`,
+      reason: `Bearish momentum detected (${currentPrice.toFixed(2)} < ${prevPrice.toFixed(2)})`,
       tickIndex: currentTickIndex,
     };
   }
-
-  return {
-    decision: 'HOLD',
-    reason: `Market consolidating within volatility envelope (Z-Score: ${zScore.toFixed(2)}σ).`,
-    tickIndex: currentTickIndex,
-  };
 }

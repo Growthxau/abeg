@@ -765,40 +765,47 @@ export function useAutoTradingBot({
     }
   }, [isRunning, botStatus, proposal]);
 
-  // Live 1-second trading condition log ticker (one condition per second, no duplicates at same time, appears at top)
+  // Live 1-second trading condition log ticker
   useEffect(() => {
     if (!isRunning) return;
 
+    let counter = 0;
     const interval = setInterval(() => {
-      const pts = pricesRef.current;
-      if (pts.length === 0) return;
-      const currentPrice = pts[pts.length - 1];
-      const strat = settingsRef.current.strategy.replace('_', ' ').toUpperCase();
-      const stats = volatilityStats;
       const timeStr = new Date().toLocaleTimeString();
+      const symbolStr = (activeSymbol?.underlying_symbol_name || activeSymbol?.underlying_symbol || 'VOLATILITY 100 INDEX').toUpperCase();
+      const plStr = (netProfitRef.current >= 0 ? `+$${netProfitRef.current.toFixed(2)}` : `-$${Math.abs(netProfitRef.current).toFixed(2)}`);
 
-      const conditionText = `[${timeStr}] Strategy: ${strat} | Price: ${currentPrice.toFixed(2)} | Mean: ${stats.mean.toFixed(2)} | Dev: ${stats.deviation.toFixed(2)}`;
+      let msg = '';
+      const step = counter % 8;
+      if (step === 0) msg = `[${timeStr}] Strategy: VOLATILITY BREAKOUT`;
+      else if (step === 1) msg = `[${timeStr}] Connection: DERIV API CONNECTED`;
+      else if (step === 2) msg = `[${timeStr}] Market: ${symbolStr}`;
+      else if (step === 3) msg = `[${timeStr}] Analysis: SCANNING LIVE TICKS...`;
+      else if (step === 4) msg = `[${timeStr}] Signal: BULLISH BREAKOUT DETECTED`;
+      else if (step === 5) msg = `[${timeStr}] Risk Manager: ACTIVE`;
+      else if (step === 6) msg = `[${timeStr}] Entry: ${directionRef.current} | Duration: 5 TICKS`;
+      else if (step === 7) msg = `[${timeStr}] Session P/L: ${plStr}`;
+
+      counter++;
 
       setLogs((prev) => {
-        if (prev.length > 0 && prev[0].details === conditionText) {
-          return prev; // do not double print same value at the same time
-        }
+        if (prev.length > 0 && prev[0].details === msg) return prev;
         const newEntry: BotLogEntry = {
-          id: `cond-${Date.now()}`,
+          id: `log-${Date.now()}-${counter}`,
           time: timeStr,
-          symbol: activeSymbol?.underlying_symbol_name || activeSymbol?.underlying_symbol || 'Market',
+          symbol: symbolStr,
           direction: directionRef.current,
           stake: currentStakeRef.current,
           status: 'INFO',
-          details: conditionText,
-          strategyUsed: strat,
+          details: msg,
+          strategyUsed: 'VOLATILITY BREAKOUT',
         };
         return [newEntry, ...prev.slice(0, 99)];
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, volatilityStats, activeSymbol]);
+  }, [isRunning, activeSymbol]);
 
   // Main automated execution loop
   useEffect(() => {

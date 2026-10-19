@@ -194,19 +194,24 @@ export function BotControls({
         <div className="flex-1 overflow-y-auto text-xs text-zinc-300 leading-relaxed py-2 space-y-1">
           <div className="text-yellow-400 font-semibold mb-1">{statusMessage}</div>
           {bot.logs.map((log) => {
+            const text = log.details || '';
             const colorClass =
-              log.status === 'WON'
-                ? 'text-emerald-400 font-medium'
-                : log.status === 'LOST'
-                ? 'text-rose-400 font-medium'
+              log.status === 'WON' || text.includes('WIN') || text.includes('BULLISH') || text.includes('CONNECTED') || text.includes('Profit')
+                ? 'text-emerald-400 font-bold'
+                : log.status === 'LOST' || text.includes('LOSS') || text.includes('BEARISH') || text.includes('DISCONNECTED')
+                ? 'text-rose-400 font-bold'
                 : log.status === 'ERROR'
-                ? 'text-amber-400 font-medium'
-                : log.status === 'PENDING'
-                ? 'text-yellow-400 font-medium'
-                : 'text-cyan-300';
+                ? 'text-amber-400 font-bold'
+                : text.includes('Signal') || text.includes('Entry') || text.includes('Trade') || text.includes('Strategy')
+                ? 'text-yellow-400 font-semibold'
+                : text.includes('Session P/L')
+                ? 'text-cyan-300 font-bold'
+                : text.includes('Market') || text.includes('Analysis') || text.includes('Risk Manager')
+                ? 'text-blue-400 font-medium'
+                : 'text-zinc-300';
             return (
-              <div key={log.id} className={cn('border-b border-zinc-900/80 pb-1', colorClass)}>
-                {log.details || `${log.time} - ${log.status}: $${log.stake}`}
+              <div key={log.id} className={cn('border-b border-zinc-900/80 pb-1 font-mono text-[11px]', colorClass)}>
+                {text}
               </div>
             );
           })}
