@@ -1,6 +1,6 @@
 'use client';
 
-// Web Audio API sound generator for trading bot events (no external MP3/WAV dependencies)
+// Web Audio API sound generator for trading bot events (loud & high volume)
 
 let audioCtx: AudioContext | null = null;
 
@@ -27,18 +27,19 @@ export function playSuccessTradeSound() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(440, now); // A4
-    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, now); // D5
+    osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.2); // D6
 
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    // High loud volume
+    gain.gain.setValueAtTime(0.85, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.25);
+    osc.stop(now + 0.35);
   } catch (err) {
     console.warn('Audio play error:', err);
   }
@@ -50,23 +51,23 @@ export function playProfitLimitSound() {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (major arpeggio)
+    const freqs = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
     freqs.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       const startTime = now + i * 0.08;
 
-      osc.type = 'sine';
+      osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, startTime);
 
-      gain.gain.setValueAtTime(0.12, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+      gain.gain.setValueAtTime(0.9, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start(startTime);
-      osc.stop(startTime + 0.2);
+      osc.stop(startTime + 0.3);
     });
   } catch (err) {
     console.warn('Audio play error:', err);
@@ -79,7 +80,7 @@ export function playLossLimitSound() {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const freqs = [440, 392, 349.23]; // Descending alert tone
+    const freqs = [520, 460, 400, 340]; // Alert tones
     freqs.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -88,14 +89,14 @@ export function playLossLimitSound() {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, startTime);
 
-      gain.gain.setValueAtTime(0.1, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+      gain.gain.setValueAtTime(0.85, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start(startTime);
-      osc.stop(startTime + 0.25);
+      osc.stop(startTime + 0.3);
     });
   } catch (err) {
     console.warn('Audio play error:', err);

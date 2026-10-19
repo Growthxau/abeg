@@ -365,8 +365,8 @@ export function MarketLiveTicker({
           {/* Deviation Status Alert Badge */}
           <div className="bg-slate-50 border border-slate-200/70 rounded-lg p-2.5 flex flex-col justify-between sm:col-span-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500">Volatility Breakout Status</span>
-              {bot?.settings.strategy === 'volatility_breakout' && (
+              <span className="text-[11px] font-semibold text-slate-500">MACD Strategy Status</span>
+              {bot?.settings.strategy === 'macd_strategy' && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
                   Bot Active Strategy
                 </span>

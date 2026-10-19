@@ -5,16 +5,9 @@ import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
 import type { Direction } from '../lib/types';
 import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
-import { evaluateTrendAndPullbackStrategy } from '@/lib/strategy';
+import { evaluateMacdStrategy } from '@/lib/strategy';
 
-export type BotStrategy =
-  | 'ai_gemini'
-  | 'volatility_breakout'
-  | 'trend_following'
-  | 'contrarian'
-  | 'alternating'
-  | 'fixed_rise'
-  | 'fixed_fall';
+export type BotStrategy = 'macd_strategy';
 
 export type MoneyManagement = 'martingale' | 'fixed' | 'dalembert';
 
@@ -75,7 +68,7 @@ export interface AiSignalData {
 export const SETTINGS_STORAGE_KEY = 'deriv_bot_risk_settings_v2';
 
 export const DEFAULT_BOT_SETTINGS: BotSettings = {
-  strategy: 'volatility_breakout',
+  strategy: 'macd_strategy',
   moneyManagement: 'martingale',
   baseStake: 10,
   martingaleMultiplier: 2.0,
@@ -156,9 +149,46 @@ export function useAutoTradingBot({
   buyError,
   onRequireAuth,
 }: UseAutoTradingBotParams): UseAutoTradingBotReturn {
-  const [isRunning, setIsRunning] = useState(false);
-  const [botStatus, setBotStatus] = useState<BotStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('Bot is idle. Click Start Bot to begin automated trading.');
+  const BOT_PERSISTENCE_KEY = 'deriv_bot_persistence_v3';
+
+  const [isRunning, setIsRunning] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return !!parsed.isRunning;
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  const [botStatus, setBotStatus] = useState<BotStatus>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.isRunning) return 'analyzing';
+        }
+      } catch {}
+    }
+    return 'idle';
+  });
+
+  const [statusMessage, setStatusMessage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.isRunning) return 'Bot session restored. Resuming MACD strategy analysis...';
+        }
+      } catch {}
+    }
+    return 'Bot is idle. Click Start Bot to begin automated trading.';
+  });
 
   // Load initial settings from localStorage if available
   const [settings, setSettings] = useState<BotSettings>(() => {
@@ -171,16 +201,139 @@ export function useAutoTradingBot({
     return DEFAULT_BOT_SETTINGS;
   });
 
-  const [currentStake, setCurrentStake] = useState<number>(settings.baseStake);
-  const [totalRuns, setTotalRuns] = useState(0);
-  const [wonRuns, setWonRuns] = useState(0);
-  const [lostRuns, setLostRuns] = useState(0);
-  const [consecutiveLosses, setConsecutiveLosses] = useState(0);
-  const [netProfit, setNetProfit] = useState(0);
-  const [logs, setLogs] = useState<BotLogEntry[]>([]);
+  const [currentStake, setCurrentStake] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.currentStake === 'number') return parsed.currentStake;
+        }
+      } catch {}
+    }
+    return settings.baseStake;
+  });
+
+  const [totalRuns, setTotalRuns] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.totalRuns === 'number') return parsed.totalRuns;
+        }
+      } catch {}
+    }
+    return 0;
+  });
+
+  const [wonRuns, setWonRuns] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.wonRuns === 'number') return parsed.wonRuns;
+        }
+      } catch {}
+    }
+    return 0;
+  });
+
+  const [lostRuns, setLostRuns] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.lostRuns === 'number') return parsed.lostRuns;
+        }
+      } catch {}
+    }
+    return 0;
+  });
+
+  const [consecutiveLosses, setConsecutiveLosses] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.consecutiveLosses === 'number') return parsed.consecutiveLosses;
+        }
+      } catch {}
+    }
+    return 0;
+  });
+
+  const [netProfit, setNetProfit] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.netProfit === 'number') return parsed.netProfit;
+        }
+      } catch {}
+    }
+    return 0;
+  });
+
+  const [logs, setLogs] = useState<BotLogEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(BOT_PERSISTENCE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.logs)) return parsed.logs;
+        }
+      } catch {}
+    }
+    return [];
+  });
+
   const [activeContractId, setActiveContractId] = useState<number | null>(null);
 
   const [aiSignal, setAiSignal] = useState<AiSignalData | null>(null);
+
+  // Save state to localStorage on changes to ensure persistence across browser close / offline
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stateToSave = {
+        isRunning,
+        currentStake,
+        totalRuns,
+        wonRuns,
+        lostRuns,
+        consecutiveLosses,
+        netProfit,
+        logs: logs.slice(0, 50),
+      };
+      localStorage.setItem(BOT_PERSISTENCE_KEY, JSON.stringify(stateToSave));
+    } catch {}
+  }, [isRunning, currentStake, totalRuns, wonRuns, lostRuns, consecutiveLosses, netProfit, logs]);
+
+  // Handle offline / online events without stopping the bot
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOffline = () => {
+      if (isRunningRef.current) {
+        setStatusMessage('Network offline detected. Bot holding position and waiting for internet reconnection...');
+      }
+    };
+    const handleOnline = () => {
+      if (isRunningRef.current) {
+        setStatusMessage('Internet reconnected. Resuming bot MACD strategy execution...');
+      }
+    };
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // References to keep callbacks current without retriggering loops
   const isRunningRef = useRef(isRunning);
@@ -375,47 +528,17 @@ export function useAutoTradingBot({
     }
   }, [activeSymbol, wonRuns]);
 
-  const lastEvaluatedCandleIndexRef = useRef(-1);
+  const lastEvaluatedTickIndexRef = useRef(-1);
 
-  // Determine next direction according to strategy
+  // Determine next direction according to MACD strategy
   const determineNextDirection = useCallback(async (): Promise<Direction | 'HOLD'> => {
-    const strat = settingsRef.current.strategy;
     const pts = pricesRef.current;
-
-    // 1. AI Gemini Model Strategy
-    if (strat === 'ai_gemini') {
-      const signal = await triggerAiAnalysis();
-      if (signal && signal.confidence >= settingsRef.current.minAiConfidence) {
-        if (signal.recommendation === 'CALL' || signal.recommendation === 'PUT') {
-          return signal.recommendation;
-        }
-      }
-    }
-
-    // 2. Volatility Breakout & Trend Pullback Strategy (EMA 9/21 + RSI + Pullback + Sideways filter)
-    if (strat === 'volatility_breakout' || strat === 'trend_following' || strat === 'contrarian') {
-      const res = evaluateTrendAndPullbackStrategy(pts, lastEvaluatedCandleIndexRef);
-      if (res.reason) {
-        setStatusMessage(`[Strategy]: ${res.reason}`);
-      }
-      return res.decision;
-    }
-
-    // 3. Fixed Rise / Fall
-    if (strat === 'fixed_rise') return 'CALL';
-    if (strat === 'fixed_fall') return 'PUT';
-
-    // 4. Alternating
-    if (strat === 'alternating') {
-      return directionRef.current === 'CALL' ? 'PUT' : 'CALL';
-    }
-
-    const res = evaluateTrendAndPullbackStrategy(pts, lastEvaluatedCandleIndexRef);
+    const res = evaluateMacdStrategy(pts, lastEvaluatedTickIndexRef);
     if (res.reason) {
-      setStatusMessage(`[Strategy]: ${res.reason}`);
+      setStatusMessage(`[MACD Strategy]: ${res.reason}`);
     }
     return res.decision;
-  }, [triggerAiAnalysis]);
+  }, []);
 
   // When buyResult arrives, record active contract and log
   useEffect(() => {

@@ -400,72 +400,70 @@ export function RiseFallView({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'risk'>('dashboard');
 
   return (
-    <div className="h-dvh w-screen bg-slate-950 flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-      <main className="w-full h-dvh sm:h-[844px] sm:max-w-[420px] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden">
-        {/* Absolutely Pinned Header - Never Moves */}
-        <div className="absolute top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
-          {headerEl}
-        </div>
+    <div className="w-full min-h-dvh bg-slate-50 text-slate-900 flex flex-col relative overflow-x-hidden pb-20">
+      {/* Pinned Header */}
+      <div className="sticky top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+        {headerEl}
+      </div>
 
-        {/* Scrollable Content Area in Between */}
-        <div className="absolute top-[74px] bottom-[56px] left-0 right-0 overflow-y-auto px-3 pb-0 space-y-3">
-          {isLoading ? (
-            <Skeleton className="h-48 w-full rounded-xl" />
-          ) : bot ? (
-            activeTab === 'dashboard' ? (
-              <BotControls
-                bot={bot}
-                isConnected={isConnected}
-                activeSymbol={activeSymbol}
-                direction={direction}
-                onDirectionChange={setDirection}
-                allowEquals={allowEquals}
-                onAllowEqualsChange={setAllowEquals}
-                duration={duration}
-                onDurationChange={setDuration}
-                durationOptions={durationOptions}
-                durationUnit={durationUnit}
-                onDurationUnitChange={setDurationUnit}
-                endDate={endDate}
-                onEndDateChange={setEndDate}
-                endTime={endTime}
-                onEndTimeChange={setEndTime}
-                ws={ws}
-                proposal={proposal}
-                isAuthenticated={authState === 'authenticated'}
-              />
-            ) : (
-              <RiskManagementView bot={bot} />
-            )
-          ) : null}
-        </div>
+      {/* Main Content Area */}
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 space-y-4">
+        {isLoading ? (
+          <Skeleton className="h-48 w-full rounded-xl" />
+        ) : bot ? (
+          activeTab === 'dashboard' ? (
+            <BotControls
+              bot={bot}
+              isConnected={isConnected}
+              activeSymbol={activeSymbol}
+              direction={direction}
+              onDirectionChange={setDirection}
+              allowEquals={allowEquals}
+              onAllowEqualsChange={setAllowEquals}
+              duration={duration}
+              onDurationChange={setDuration}
+              durationOptions={durationOptions}
+              durationUnit={durationUnit}
+              onDurationUnitChange={setDurationUnit}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              endTime={endTime}
+              onEndTimeChange={setEndTime}
+              ws={ws}
+              proposal={proposal}
+              isAuthenticated={authState === 'authenticated'}
+            />
+          ) : (
+            <RiskManagementView bot={bot} />
+          )
+        ) : null}
+      </div>
 
-        {/* Absolutely Pinned Bottom Navbar - Never Moves */}
-        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 h-14 px-6 flex items-center justify-around shadow-lg">
-          <button
-            type="button"
-            onClick={() => setActiveTab('dashboard')}
-            className={cn(
-              'flex flex-col items-center gap-1 transition-colors cursor-pointer',
-              activeTab === 'dashboard' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
-            )}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[10px]">Dashboard</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('risk')}
-            className={cn(
-              'flex flex-col items-center gap-1 transition-colors cursor-pointer',
-              activeTab === 'risk' ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
-            )}
-          >
-            <ShieldAlert className="w-5 h-5" />
-            <span className="text-[10px]">Risk Management</span>
-          </button>
-        </div>
-      </main>
+      {/* Fixed Bottom Navbar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 h-16 px-6 flex items-center justify-center gap-16 shadow-lg">
+        <button
+          type="button"
+          onClick={() => setActiveTab('dashboard')}
+          className={cn(
+            'flex items-center gap-2 transition-colors cursor-pointer py-2 px-4 rounded-xl',
+            activeTab === 'dashboard' ? 'text-red-600 font-bold bg-red-50' : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <LayoutDashboard className="w-5 h-5" />
+          <span className="text-xs font-semibold">Dashboard</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('risk')}
+          className={cn(
+            'flex items-center gap-2 transition-colors cursor-pointer py-2 px-4 rounded-xl',
+            activeTab === 'risk' ? 'text-red-600 font-bold bg-red-50' : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <ShieldAlert className="w-5 h-5" />
+          <span className="text-xs font-semibold">Risk Management</span>
+        </button>
+      </div>
     </div>
   );
 

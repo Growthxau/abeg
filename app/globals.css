@@ -6,11 +6,11 @@
   :root {
     --radius: 0.5rem;
     
-    /* Red wine color theme */
-    --primary: 114 47 55;
-    --accent: 250 242 242;
-    --background: 250 245 245;
-    --border: 114 47 55 / 0.15;
+    /* Red color theme */
+    --primary: 239 68 68;
+    --accent: 254 242 242;
+    --background: 254 242 242;
+    --border: 239 68 68 / 0.15;
     --card: 255 255 255;
     --card-foreground: 10 10 10;
     --destructive: 230 25 14 / 0.7200000286102295;

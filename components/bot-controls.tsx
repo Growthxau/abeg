@@ -69,8 +69,8 @@ export function BotControls({
         );
       }
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           BOT RUNNING
         </span>
       );
@@ -109,10 +109,10 @@ export function BotControls({
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-sm leading-tight flex items-center gap-1.5">
-                <span>Volatility 100 (1s) Index</span>
+                <span>Volatility 100 Index</span>
               </h3>
               <p className="text-xs text-slate-500">
-                Automated Bot • Multiplier 1.5x
+                MACD (5, 13, 4) + EMA 20 • 5 Ticks
               </p>
             </div>
           </div>
@@ -137,7 +137,7 @@ export function BotControls({
               onClick={startBot}
               disabled={!isConnected}
               size="lg"
-              className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-base shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>START AUTO BOT</span>

@@ -1,6 +1,6 @@
 import type { ActiveSymbol } from '../types';
 
-const DEFAULT_SYMBOL = '1HZ100V';
+const DEFAULT_SYMBOL = 'R_100';
 
 const isOpen = (s: ActiveSymbol) => s.exchange_is_open === 1;
 
@@ -27,7 +27,7 @@ const fromFavorites = (symbols: ActiveSymbol[]): ActiveSymbol | undefined => {
  *
  * 1. `preferredSymbol` arg (e.g. from URL ?symbol= param) — if open
  * 2. First open symbol from the user's SmartChart cq-favorites
- * 3. 1HZ100V (Volatility 100 1s Index) — if open
+ * 3. R_100 (Volatility 100 Index) — if open
  * 4. First open symbol in the random_index submarket
  * 5. First open symbol in the major_pairs submarket
  * 6. Any major_pairs symbol (regardless of exchange_is_open)
@@ -49,9 +49,9 @@ export function pickDefaultSymbol(
   const fav = fromFavorites(symbols);
   if (fav) return fav;
 
-  // 3. 1HZ100V if open
-  const volatility100_1s = symbols.find((s) => s.underlying_symbol === DEFAULT_SYMBOL && isOpen(s));
-  if (volatility100_1s) return volatility100_1s;
+  // 3. R_100 if open
+  const volatility100 = symbols.find((s) => s.underlying_symbol === DEFAULT_SYMBOL && isOpen(s));
+  if (volatility100) return volatility100;
 
   // 4. First open random_index symbol
   const randomIndex = symbols.find((s) => s.submarket === 'random_index' && isOpen(s));
