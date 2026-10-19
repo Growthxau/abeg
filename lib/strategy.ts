@@ -12,79 +12,57 @@ export function computeEMA(data: number[], period: number): number[] {
   return emaArray;
 }
 
-export function computeMACD(data: number[], fastPeriod = 5, slowPeriod = 13, signalPeriod = 4) {
-  const fastEMA = computeEMA(data, fastPeriod);
-  const slowEMA = computeEMA(data, slowPeriod);
-  const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
-  const signalLine = computeEMA(macdLine, signalPeriod);
-  return { macdLine, signalLine };
-}
-
-export function evaluateMacdStrategy(
+export function evaluateVolatilityMomentumStrategy(
   prices: number[],
-  lastEvaluatedTickIndexRef: { current: number }
+  lastEvaluatedTickIndexRef: { current: number },
+  deviationMultiplier = 1.5,
+  deviationPeriod = 15
 ): { decision: 'CALL' | 'PUT' | 'HOLD'; reason: string; tickIndex: number } {
-  if (prices.length < 25) {
-    return { decision: 'HOLD', reason: 'Waiting for sufficient price history (need 25+ ticks)', tickIndex: -1 };
+  if (prices.length < Math.max(10, deviationPeriod)) {
+    return { decision: 'HOLD', reason: 'Waiting for sufficient tick history...', tickIndex: -1 };
   }
 
   const currentTickIndex = prices.length - 1;
-  // Prevent duplicate signal evaluation on the exact same tick
   if (lastEvaluatedTickIndexRef.current === currentTickIndex) {
-    return { decision: 'HOLD', reason: 'Already evaluated tick #' + currentTickIndex, tickIndex: currentTickIndex };
+    return { decision: 'HOLD', reason: 'Tick already evaluated', tickIndex: currentTickIndex };
   }
 
-  const ema20 = computeEMA(prices, 20);
-  const { macdLine, signalLine } = computeMACD(prices, 5, 13, 4);
+  const window = prices.slice(-deviationPeriod);
+  const currentPrice = prices[prices.length - 1];
+  const prevPrice = prices[prices.length - 2];
 
-  const i = macdLine.length - 1;
-  if (i < 1) {
-    return { decision: 'HOLD', reason: 'Calculating MACD indicators...', tickIndex: currentTickIndex };
-  }
+  const mean = window.reduce((a, b) => a + b, 0) / window.length;
+  const variance = window.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / window.length;
+  const deviation = Math.sqrt(variance);
 
-  const currentPrice = prices[i];
-  const prevPrice = prices[i - 1];
-  const currentEma20 = ema20[i];
+  const upperBand = mean + deviationMultiplier * deviation;
+  const lowerBand = mean - deviationMultiplier * deviation;
 
-  const currentMacd = macdLine[i];
-  const prevMacd = macdLine[i - 1];
-  const currentSignal = signalLine[i];
-  const prevSignal = signalLine[i - 1];
-
-  // MACD crossover above signal line
-  const macdCrossAbove = prevMacd <= prevSignal && currentMacd > currentSignal;
-  // MACD crossover below signal line
-  const macdCrossBelow = prevMacd >= prevSignal && currentMacd < currentSignal;
-
-  // Trend filter: price above / below EMA 20
-  const priceAboveEma = currentPrice > currentEma20;
-  const priceBelowEma = currentPrice < currentEma20;
-
-  // Next tick confirms upward / downward movement
-  const confirmsUpward = currentPrice > prevPrice;
-  const confirmsDownward = currentPrice < prevPrice;
+  const zScore = deviation > 0 ? (currentPrice - mean) / deviation : 0;
+  const momentum = currentPrice - prevPrice;
 
   lastEvaluatedTickIndexRef.current = currentTickIndex;
 
-  if (macdCrossAbove && priceAboveEma && confirmsUpward) {
+  // Volatility Breakout Deviation + Momentum Volatility + Tick Confluence
+  if (currentPrice >= upperBand || (zScore >= 1.2 && momentum > 0 && currentPrice > mean)) {
     return {
       decision: 'CALL',
-      reason: `RISE: MACD crossed above signal (${currentMacd.toFixed(4)} > ${currentSignal.toFixed(4)}), Price (${currentPrice.toFixed(2)}) > EMA20 (${currentEma20.toFixed(2)}), Tick confirmed UP.`,
+      reason: `RISE Signal: Volatility deviation upper band breakthrough with positive momentum.`,
       tickIndex: currentTickIndex,
     };
   }
 
-  if (macdCrossBelow && priceBelowEma && confirmsDownward) {
+  if (currentPrice <= lowerBand || (zScore <= -1.2 && momentum < 0 && currentPrice < mean)) {
     return {
       decision: 'PUT',
-      reason: `FALL: MACD crossed below signal (${currentMacd.toFixed(4)} < ${currentSignal.toFixed(4)}), Price (${currentPrice.toFixed(2)}) < EMA20 (${currentEma20.toFixed(2)}), Tick confirmed DOWN.`,
+      reason: `FALL Signal: Volatility deviation lower band breakthrough with negative momentum.`,
       tickIndex: currentTickIndex,
     };
   }
 
   return {
     decision: 'HOLD',
-    reason: `HOLD: MACD (${currentMacd.toFixed(4)}/${currentSignal.toFixed(4)}), Price (${currentPrice.toFixed(2)}) vs EMA20 (${currentEma20.toFixed(2)}). Skipping choppy/invalid condition.`,
+    reason: `Market consolidating within volatility envelope (Z-Score: ${zScore.toFixed(2)}σ).`,
     tickIndex: currentTickIndex,
   };
 }

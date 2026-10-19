@@ -93,9 +93,9 @@ export function BotControls({
   };
 
   return (
-    <div className="w-full space-y-4 pb-4">
+    <div className="w-full space-y-3 pb-0">
       {/* Prominent Bright Yellow Account Summary Card */}
-      <div className="rounded-2xl bg-yellow-400 text-zinc-950 p-4 shadow-lg space-y-3">
+      <div className="mx-3 rounded-2xl bg-yellow-400 text-zinc-950 p-4 shadow-lg space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-bold uppercase tracking-wider opacity-80">
             {activeAccount ? (activeAccount.account_type === 'demo' ? 'Demo Account' : 'Real Account') : 'Account Summary'}
@@ -135,7 +135,7 @@ export function BotControls({
       </div>
 
       {/* Volatility 100 Index Trading Card & Bot Status & Start/Stop Button */}
-      <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-4 shadow-md space-y-3.5 text-zinc-100">
+      <div className="mx-3 rounded-2xl border border-zinc-800 bg-[#1E1E22] p-4 shadow-md space-y-3.5 text-zinc-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-xl bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
@@ -180,8 +180,8 @@ export function BotControls({
         </div>
       </div>
 
-      {/* Console Log Card */}
-      <div className="rounded-2xl border border-zinc-800 bg-black text-zinc-100 p-4 shadow-md h-[220px] flex flex-col font-mono">
+      {/* Console Log Card - Full Width Edge-to-Edge Joining Navbar */}
+      <div className="w-full rounded-none border-x-0 border-b-0 border-t border-zinc-800 bg-black text-zinc-100 p-4 shadow-none h-[220px] flex flex-col font-mono m-0">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5 shrink-0">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-yellow-400 animate-pulse" />

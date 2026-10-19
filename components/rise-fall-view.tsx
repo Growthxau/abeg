@@ -400,7 +400,7 @@ export function RiseFallView({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'risk'>('dashboard');
 
   return (
-    <div className="h-dvh w-screen bg-black flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+    <div className="h-dvh w-screen bg-[#121212] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
       <main className="w-full h-dvh sm:h-[844px] sm:max-w-[420px] sm:rounded-[44px] sm:shadow-2xl sm:border-[10px] sm:border-zinc-800 bg-[#121212] text-zinc-100 flex flex-col relative overflow-hidden">
         {/* Absolutely Pinned Header - Never Moves */}
         <div className="absolute top-0 left-0 right-0 z-50 bg-[#121212]/95 backdrop-blur border-b border-zinc-800">
@@ -408,7 +408,7 @@ export function RiseFallView({
         </div>
 
         {/* Scrollable Content Area in Between */}
-        <div className="absolute top-[74px] bottom-[56px] left-0 right-0 overflow-y-auto px-3 pb-28 space-y-3">
+        <div className="absolute top-[74px] bottom-[56px] left-0 right-0 overflow-y-auto px-0 pb-0 space-y-3">
           {isLoading ? (
             <Skeleton className="h-48 w-full rounded-xl" />
           ) : bot ? (

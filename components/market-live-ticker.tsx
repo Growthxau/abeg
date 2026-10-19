@@ -365,12 +365,10 @@ export function MarketLiveTicker({
           {/* Deviation Status Alert Badge */}
           <div className="bg-slate-50 border border-slate-200/70 rounded-lg p-2.5 flex flex-col justify-between sm:col-span-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500">MACD Strategy Status</span>
-              {bot?.settings.strategy === 'macd_strategy' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                  Bot Active Strategy
-                </span>
-              )}
+              <span className="text-[11px] font-semibold text-slate-500">Signal Engine Status</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                Active Confluence
+              </span>
             </div>
             <div className="mt-1">
               {isBreakoutUp ? (
