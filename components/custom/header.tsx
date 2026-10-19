@@ -165,7 +165,7 @@ export function Header({
                 size="sm"
                 onClick={onSignUp}
                 disabled={isAuthenticating}
-                className="h-7 px-2.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
+                className="h-7 px-2.5 text-xs font-bold bg-yellow-400 hover:bg-yellow-500 text-zinc-950 cursor-pointer"
               >
                 Sign up
               </Button>

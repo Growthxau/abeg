@@ -3,11 +3,7 @@
 import {
   Play,
   Square,
-  TrendingUp,
-  ShieldAlert,
   Activity,
-  DollarSign,
-  Award,
   Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,13 +44,9 @@ export function BotControls({
     isRunning,
     botStatus,
     statusMessage,
-    currentStake,
-    settings,
-    totalRuns,
     wonRuns,
     lostRuns,
     winRate,
-    consecutiveLosses,
     netProfit,
     startBot,
     stopBot,
@@ -101,7 +93,7 @@ export function BotControls({
   };
 
   return (
-    <div className="w-full space-y-3.5 pb-2">
+    <div className="w-full space-y-4 pb-4">
       {/* Prominent Bright Yellow Account Summary Card */}
       <div className="rounded-2xl bg-yellow-400 text-zinc-950 p-4 shadow-lg space-y-3">
         <div className="flex items-center justify-between">
@@ -188,76 +180,8 @@ export function BotControls({
         </div>
       </div>
 
-      {/* Live Session Metrics (Net Profit, Win Rate, Stake, Loss Streak) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-3 shadow-md text-zinc-100">
-          <div className="flex items-center justify-between text-zinc-400 mb-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Net Profit</span>
-            <DollarSign className="w-3.5 h-3.5 text-yellow-400" />
-          </div>
-          <div
-            className={cn(
-              'text-lg font-bold tracking-tight font-mono',
-              netProfit > 0
-                ? 'text-emerald-400'
-                : netProfit < 0
-                ? 'text-rose-400'
-                : 'text-zinc-200'
-            )}
-          >
-            {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`}
-          </div>
-          <span className="text-[10px] text-zinc-500">Session P/L</span>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-3 shadow-md text-zinc-100">
-          <div className="flex items-center justify-between text-zinc-400 mb-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Win Rate</span>
-            <Award className="w-3.5 h-3.5 text-yellow-400" />
-          </div>
-          <div className="text-lg font-bold text-zinc-100 tracking-tight font-mono">
-            {winRate}%
-          </div>
-          <span className="text-[10px] text-zinc-500">
-            {wonRuns}W / {lostRuns}L ({totalRuns} runs)
-          </span>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-3 shadow-md text-zinc-100">
-          <div className="flex items-center justify-between text-zinc-400 mb-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Stake</span>
-            <TrendingUp className="w-3.5 h-3.5 text-yellow-400" />
-          </div>
-          <div className="text-lg font-bold text-zinc-100 tracking-tight font-mono">
-            ${currentStake.toFixed(2)}
-          </div>
-          <span className="text-[10px] text-zinc-500">
-            Base: ${settings.baseStake}
-          </span>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800 bg-[#1E1E22] p-3 shadow-md text-zinc-100">
-          <div className="flex items-center justify-between text-zinc-400 mb-1">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Loss Streak</span>
-            <ShieldAlert className="w-3.5 h-3.5 text-yellow-400" />
-          </div>
-          <div
-            className={cn(
-              'text-lg font-bold tracking-tight font-mono',
-              consecutiveLosses > 0 ? 'text-amber-400' : 'text-zinc-100'
-            )}
-          >
-            {consecutiveLosses}{' '}
-            <span className="text-xs font-normal text-zinc-500">
-              / {settings.maxConsecutiveLosses || '∞'}
-            </span>
-          </div>
-          <span className="text-[10px] text-zinc-500">Consecutive</span>
-        </div>
-      </div>
-
       {/* Console Log Card */}
-      <div className="rounded-2xl border border-zinc-800 bg-black text-zinc-100 p-4 shadow-md h-[180px] flex flex-col font-mono">
+      <div className="rounded-2xl border border-zinc-800 bg-black text-zinc-100 p-4 shadow-md h-[220px] flex flex-col font-mono">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5 shrink-0">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-yellow-400 animate-pulse" />
