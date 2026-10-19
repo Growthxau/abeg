@@ -54,6 +54,7 @@ export function LiveRiseFall({
     ws: trading.ws,
     isConnected: trading.isConnected,
     isAuthenticated: !!auth.wsUrl,
+    activeAccount,
     activeSymbol: trading.activeSymbol,
     prices: trading.prices,
     direction: trading.direction,

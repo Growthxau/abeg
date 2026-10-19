@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
 import type { Direction } from '../lib/types';
 import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
-import { evaluateVolatilityBreakoutDeviationStrategy } from '@/lib/strategy';
+import { evaluateSniperScalpingStrategy } from '@/lib/strategy';
 
 export type BotStrategy = 'volatility_breakout';
 
@@ -86,6 +86,7 @@ export interface UseAutoTradingBotParams {
   ws: DerivWS | null;
   isConnected: boolean;
   isAuthenticated: boolean;
+  activeAccount: any | null;
   activeSymbol: ActiveSymbol | null;
   prices: number[];
   direction: Direction;
@@ -135,6 +136,7 @@ export function useAutoTradingBot({
   ws,
   isConnected,
   isAuthenticated,
+  activeAccount,
   activeSymbol,
   prices,
   direction,
@@ -150,6 +152,9 @@ export function useAutoTradingBot({
   onRequireAuth,
 }: UseAutoTradingBotParams): UseAutoTradingBotReturn {
   const BOT_PERSISTENCE_KEY = 'deriv_bot_persistence_v3';
+
+  const activeAccountRef = useRef(activeAccount);
+  activeAccountRef.current = activeAccount;
 
   const [isRunning, setIsRunning] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -472,7 +477,15 @@ export function useAutoTradingBot({
       return;
     }
 
+    const balanceNum = activeAccountRef.current ? parseFloat(String(activeAccountRef.current.balance ?? '0')) : 0;
     const base = settingsRef.current.baseStake;
+    if (balanceNum <= 0 || balanceNum < base) {
+      toast.error('Cannot Start Bot', {
+        description: `Insufficient balance ($${balanceNum.toFixed(2)}) for base stake ($${base}). Please deposit funds or lower your stake.`,
+      });
+      return;
+    }
+
     setCurrentStake(base);
     currentStakeRef.current = base;
     setStake(base.toString());
@@ -530,18 +543,15 @@ export function useAutoTradingBot({
 
   const lastEvaluatedTickIndexRef = useRef(-1);
 
-  // Determine next direction using Volatility Breakout Deviation strategy
+  // Determine next direction using fast sniper scalping strategy (no bands)
   const determineNextDirection = useCallback(async (): Promise<Direction | 'HOLD'> => {
     const pts = pricesRef.current;
-    const settings = settingsRef.current;
-    const res = evaluateVolatilityBreakoutDeviationStrategy(
+    const res = evaluateSniperScalpingStrategy(
       pts,
-      lastEvaluatedTickIndexRef,
-      settings.deviationMultiplier,
-      settings.deviationPeriod
+      lastEvaluatedTickIndexRef
     );
     if (res.reason) {
-      setStatusMessage(`[Breakout Engine]: ${res.reason}`);
+      setStatusMessage(`[Sniper Scalper]: ${res.reason}`);
     }
     return res.decision;
   }, []);
@@ -821,6 +831,18 @@ export function useAutoTradingBot({
     let cancelled = false;
 
     const executeNextTrade = async () => {
+      const balanceNum = activeAccountRef.current ? parseFloat(String(activeAccountRef.current.balance ?? '0')) : 0;
+      if (balanceNum <= 0 || balanceNum < currentStakeRef.current) {
+        setIsRunning(false);
+        isRunningRef.current = false;
+        setBotStatus('error');
+        setStatusMessage(`Insufficient balance ($${balanceNum.toFixed(2)}) for stake ($${currentStakeRef.current}). Bot stopped.`);
+        toast.error('Insufficient Account Balance', {
+          description: `Your balance is $${balanceNum.toFixed(2)}, but stake is $${currentStakeRef.current}. Bot stopped to prevent failed orders.`,
+        });
+        return;
+      }
+
       const nextDir = await determineNextDirection();
       if (cancelled || !isRunningRef.current) return;
 
