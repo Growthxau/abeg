@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { DerivWS, ProposalInfo, BuyResult, ActiveSymbol } from '@deriv/core';
 import type { Direction } from '../lib/types';
 import { playSuccessTradeSound, playProfitLimitSound, playLossLimitSound } from '@/lib/sound-effects';
-import { evaluateSniperScalpingStrategy } from '@/lib/strategy';
+import { evaluateMacdCrossoverStrategy } from '@/lib/strategy';
 
 export type BotStrategy = 'volatility_breakout';
 
@@ -549,15 +549,15 @@ export function useAutoTradingBot({
 
   const lastEvaluatedTickIndexRef = useRef(-1);
 
-  // Determine next direction using fast sniper scalping strategy (no bands)
+  // Determine next direction using MACD Crossover (Fast 12, Slow 26, Signal 9)
   const determineNextDirection = useCallback(async (): Promise<Direction | 'HOLD'> => {
     const pts = pricesRef.current;
-    const res = evaluateSniperScalpingStrategy(
+    const res = evaluateMacdCrossoverStrategy(
       pts,
       lastEvaluatedTickIndexRef
     );
     if (res.reason) {
-      setStatusMessage(`[Sniper Scalper]: ${res.reason}`);
+      setStatusMessage(`[MACD Crossover]: ${res.reason}`);
     }
     return res.decision;
   }, []);
