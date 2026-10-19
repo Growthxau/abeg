@@ -765,10 +765,11 @@ export function useAutoTradingBot({
     }
   }, [isRunning, botStatus, proposal]);
 
-  // Live 1-second trading condition log ticker
+  // Live trading condition log ticker
   useEffect(() => {
     if (!isRunning) return;
 
+    let loggedConn = false;
     let counter = 0;
     const interval = setInterval(() => {
       const timeStr = new Date().toLocaleTimeString();
@@ -776,15 +777,18 @@ export function useAutoTradingBot({
       const plStr = (netProfitRef.current >= 0 ? `+$${netProfitRef.current.toFixed(2)}` : `-$${Math.abs(netProfitRef.current).toFixed(2)}`);
 
       let msg = '';
-      const step = counter % 8;
-      if (step === 0) msg = `[${timeStr}] Strategy: VOLATILITY BREAKOUT`;
-      else if (step === 1) msg = `[${timeStr}] Connection: DERIV API CONNECTED`;
-      else if (step === 2) msg = `[${timeStr}] Market: ${symbolStr}`;
-      else if (step === 3) msg = `[${timeStr}] Analysis: SCANNING LIVE TICKS...`;
-      else if (step === 4) msg = `[${timeStr}] Signal: BULLISH BREAKOUT DETECTED`;
-      else if (step === 5) msg = `[${timeStr}] Risk Manager: ACTIVE`;
-      else if (step === 6) msg = `[${timeStr}] Entry: ${directionRef.current} | Duration: 5 TICKS`;
-      else if (step === 7) msg = `[${timeStr}] Session P/L: ${plStr}`;
+      if (!loggedConn) {
+        msg = `[${timeStr}] Connection: DERIV API CONNECTED`;
+        loggedConn = true;
+      } else {
+        const step = counter % 6;
+        if (step === 0) msg = `[${timeStr}] Strategy: VOLATILITY BREAKOUT`;
+        else if (step === 1) msg = `[${timeStr}] Market: ${symbolStr}`;
+        else if (step === 2) msg = `[${timeStr}] Analysis: SCANNING LIVE TICKS...`;
+        else if (step === 3) msg = `[${timeStr}] Signal: BULLISH BREAKOUT DETECTED`;
+        else if (step === 4) msg = `[${timeStr}] Risk Manager: ACTIVE`;
+        else if (step === 5) msg = `[${timeStr}] Session P/L: ${plStr}`;
+      }
 
       counter++;
 
@@ -802,7 +806,7 @@ export function useAutoTradingBot({
         };
         return [newEntry, ...prev.slice(0, 99)];
       });
-    }, 1000);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, [isRunning, activeSymbol]);

@@ -135,8 +135,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     useBuy(tradingWs, tradingIsConnected);
 
   const proposalParams: ProposalParams | null = useMemo(() => {
-    if (isBuying || !activeSymbol || !durationOptions.length) return null;
-    if (durationOptionsSymbol !== activeSymbol.underlying_symbol) return null;
+    if (isBuying || !activeSymbol) return null;
     const stakeNum = parseFloat(stake);
     if (!stakeNum || stakeNum <= 0) return null;
 
@@ -154,15 +153,15 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       return { ...base, duration: 0, durationUnit: 'd', dateExpiry };
     }
 
-    const opt = durationOptions.find(o => o.unit === durationUnit);
-    if (!opt || duration < opt.min || duration > opt.max) return null;
+    const dur = duration || 5;
+    const unit = durationUnit || 't';
 
-    if (durationUnit === 'h') {
-      return { ...base, duration: duration * 60, durationUnit: 'm' };
+    if (unit === 'h') {
+      return { ...base, duration: dur * 60, durationUnit: 'm' };
     }
 
-    return { ...base, duration, durationUnit };
-  }, [activeSymbol, direction, allowEquals, stake, duration, durationUnit, endDate, endTime, isBuying, durationOptions, durationOptionsSymbol]);
+    return { ...base, duration: dur, durationUnit: unit };
+  }, [activeSymbol, direction, allowEquals, stake, duration, durationUnit, endDate, endTime, isBuying]);
 
   const { proposal } = useProposal(tradingWs, tradingIsConnected, proposalParams);
 
